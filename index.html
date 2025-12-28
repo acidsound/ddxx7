@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DX7 Digital FM Synth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #e5e7eb;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            /* Prevent text selection and browser gestures */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: none;
+        }
+        
+        /* Allow selection inside input fields */
+        input, textarea {
+            -webkit-user-select: text;
+            -khtml-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+
+        .dx7-teal { color: #00d4c1; }
+        .dx7-bg-teal { background-color: #00d4c1; }
+        .text-dx7-ink { color: #00d4c1; } /* Updated to signature teal as requested */
+        .dx7-brown { color: #4a3728; }
+        .dx7-bg-brown { background-color: #4a3728; }
+        .lcd-screen {
+            background-color: #2b3a32;
+            color: #7efab4;
+            font-family: 'JetBrains Mono', monospace;
+            text-shadow: 0 0 5px rgba(126, 250, 180, 0.5);
+        }
+        .membrane-button {
+            transition: all 0.1s ease;
+            box-shadow: 0 2px 0 rgba(0,0,0,0.5);
+        }
+        .membrane-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.5);
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>

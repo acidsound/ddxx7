@@ -1,8 +1,6 @@
 
 import { Patch } from './types';
 
-// Fix: DEFAULT_PATCH must implement all properties from the Patch and OperatorParams interfaces.
-// Renamed property names (e.g., level -> volume, coarse -> freqCoarse) to match the defined interfaces.
 export const DEFAULT_PATCH: Patch = {
   name: "INIT VOICE",
   algorithm: 1,
@@ -20,7 +18,7 @@ export const DEFAULT_PATCH: Patch = {
     keyScaleCurveR: 0,
     keyScaleDepthL: 0,
     keyScaleDepthR: 0,
-    velocitySens: 0,
+    velocitySens: 3,
     lfoAmpModSens: 0,
     oscMode: 0,
     ampL: 1,
@@ -30,21 +28,24 @@ export const DEFAULT_PATCH: Patch = {
   lfoDelay: 0,
   lfoPitchModDepth: 0,
   lfoAmpModDepth: 0,
-  lfoPitchModSens: 0,
+  lfoPitchModSens: 3,
   lfoSync: true,
+  oscKeySync: true,
   lfoWaveform: 0,
   pitchEnvelope: {
     rates: [99, 99, 99, 99] as [number, number, number, number],
     levels: [50, 50, 50, 50] as [number, number, number, number],
   },
   transpose: 24,
-  mono: false
+  fineTune: 0,
+  cutoff: 99,
+  resonance: 0,
+  masterLevel: 80,
+  mono: false,
+  aftertouchEnabled: false,
+  reverbDepth: 0
 };
 
-// Simplified algorithm representation: carriers and their modulators
 export const ALGORITHMS = [
-  // This is a mapping used by the engine to connect nodes
-  // In a real DX7, there are 32. We implement a subset for the demo or structure it generically.
   { id: 1, carriers: [1, 3], modulators: { 1: [2], 2: [], 3: [4], 4: [5, 6], 5: [], 6: [] } },
-  // ... more mappings
 ];

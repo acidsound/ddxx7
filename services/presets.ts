@@ -12,7 +12,7 @@ const createDefaultOp = (vol = 0): OperatorParams => ({
   keyScaleRate: 0,
   detune: 7,
   lfoAmpModSens: 0,
-  velocitySens: 3, // Set to 3 by default instead of 0 for immediate keyboard responsiveness
+  velocitySens: 3,
   volume: vol,
   oscMode: 0,
   freqCoarse: 1,
@@ -35,8 +35,14 @@ export const PRESETS: Patch[] = [
       { ...createDefaultOp(0), freqCoarse: 1 },
     ],
     lfoSpeed: 35, lfoDelay: 0, lfoPitchModDepth: 0, lfoAmpModDepth: 0, lfoPitchModSens: 3, lfoWaveform: 0, lfoSync: true,
+    oscKeySync: true,
     pitchEnvelope: { rates: [99, 99, 99, 99], levels: [50, 50, 50, 50] },
-    transpose: 24, mono: false
+    transpose: 24, 
+    fineTune: 0,
+    cutoff: 99,
+    resonance: 0,
+    masterLevel: 80,
+    mono: false, aftertouchEnabled: false, reverbDepth: 0
   },
   {
     name: "E.PIANO 1",
@@ -51,7 +57,13 @@ export const PRESETS: Patch[] = [
       { ...createDefaultOp(0), freqCoarse: 1 },
     ],
     lfoSpeed: 35, lfoDelay: 0, lfoPitchModDepth: 0, lfoAmpModDepth: 0, lfoPitchModSens: 3, lfoWaveform: 0, lfoSync: true,
+    oscKeySync: true,
     pitchEnvelope: { rates: [99, 99, 99, 99], levels: [50, 50, 50, 50] },
-    transpose: 24, mono: false
+    transpose: 24, 
+    fineTune: 0,
+    cutoff: 99,
+    resonance: 0,
+    masterLevel: 80,
+    mono: false, aftertouchEnabled: false, reverbDepth: 0
   }
 ];

@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface KnobProps {
   label: string;
@@ -8,10 +7,10 @@ interface KnobProps {
   max: number;
   onChange: (val: number) => void;
   size?: number;
-  displayValue?: string | number;
+  displayValue?: string | number | ((val: number) => string | number);
 }
 
-const ControlKnob: React.FC<KnobProps> = ({ label, value, min, max, onChange, size = 44, displayValue }) => {
+export default function ControlKnob({ label, value, min, max, onChange, size = 38, displayValue }: KnobProps) {
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const startVal = useRef(0);
@@ -27,7 +26,7 @@ const ControlKnob: React.FC<KnobProps> = ({ label, value, min, max, onChange, si
     if (!isDragging) return;
     const deltaY = startY.current - e.clientY;
     const range = max - min;
-    const sensitivity = 0.5;
+    const sensitivity = 0.4;
     let newVal = startVal.current + (deltaY * (range / 100)) * sensitivity;
     newVal = Math.max(min, Math.min(max, Math.round(newVal)));
     if (newVal !== value) onChange(newVal);
@@ -37,15 +36,17 @@ const ControlKnob: React.FC<KnobProps> = ({ label, value, min, max, onChange, si
 
   const rotation = ((value - min) / (max - min)) * 270 - 135;
 
+  const formattedValue = typeof displayValue === 'function' 
+    ? displayValue(value) 
+    : displayValue ?? value;
+
   return (
     <div className="flex flex-col items-center gap-1 group relative">
-      {/* Popover - Now closer to the knob and with a backdrop */}
       {isDragging && (
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-ink font-mono text-[10px] px-2 py-0.5 rounded shadow-lg z-50 animate-in fade-in zoom-in duration-75 whitespace-nowrap">
-          {displayValue ?? value}
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-ink font-mono text-[9px] px-1.5 py-0.5 rounded shadow-lg z-50 animate-in fade-in zoom-in duration-75 whitespace-nowrap">
+          {formattedValue}
         </div>
       )}
-      
       <div 
         className="relative cursor-ns-resize touch-none"
         onPointerDown={handlePointerDown}
@@ -53,20 +54,16 @@ const ControlKnob: React.FC<KnobProps> = ({ label, value, min, max, onChange, si
         onPointerUp={handlePointerUp}
         style={{ width: size, height: size }}
       >
-        {/* Knob Body */}
-        <div className="w-full h-full rounded-full bg-[#1a1a1a] border-2 border-[#333] shadow-inner flex items-center justify-center">
+        <div className="w-full h-full rounded-full bg-[#111] border border-[#333] shadow-inner flex items-center justify-center overflow-hidden">
           <div 
-            className="w-[85%] h-[85%] rounded-full bg-gradient-to-br from-[#444] to-[#222] shadow-md relative"
+            className="w-[90%] h-[90%] rounded-full bg-gradient-to-br from-[#333] to-[#111] shadow-md relative"
             style={{ transform: `rotate(${rotation}deg)` }}
           >
-            {/* Pointer Indicator */}
-            <div className="absolute top-1 left-1/2 -translate-x-1/2 w-1 h-3 bg-dx7-teal rounded-full shadow-[0_0_5px_rgba(0,212,193,0.5)]"></div>
+            <div className="absolute top-0.5 left-1/2 -translate-x-1/2 w-0.5 h-2 bg-gray-300 rounded-full opacity-60"></div>
           </div>
         </div>
       </div>
-      <span className="text-[8px] text-gray-500 uppercase font-bold tracking-tighter text-center leading-none">{label}</span>
+      <span className="text-[8px] md:text-[9px] text-gray-400 uppercase font-bold tracking-tight text-center leading-tight max-w-[50px] line-clamp-2 min-h-[1.5em]">{label}</span>
     </div>
   );
-};
-
-export default ControlKnob;
+}

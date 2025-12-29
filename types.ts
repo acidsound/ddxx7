@@ -31,13 +31,20 @@ export interface Patch {
   lfoAmpModDepth: number;
   lfoPitchModSens: number;
   lfoWaveform: number;
-  lfoSync: boolean;
+  lfoSync: boolean; // This is LFO Key Sync
+  oscKeySync: boolean;
   pitchEnvelope: {
     rates: [number, number, number, number];
     levels: [number, number, number, number];
   };
   transpose: number;
+  fineTune: number; // -50 to 50
+  cutoff: number;
+  resonance: number;
+  masterLevel: number;
   mono: boolean;
+  aftertouchEnabled: boolean;
+  reverbDepth: number;
 }
 
 export interface MidiDevice {

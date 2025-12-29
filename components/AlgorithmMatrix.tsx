@@ -1,152 +1,241 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { ALGORITHMS } from '../services/algorithms';
 
 interface AlgorithmMatrixProps {
   algorithmId: number; // 1-32
 }
 
-// DX7 Routing Data (Carrier = Index 0, Feedback loop indicated by self-modulation)
-const ROUTING_DATA: { [key: number]: { carriers: number[], connections: [number, number][], feedback: number } } = {
-  1: { carriers: [1, 3], connections: [[2, 1], [4, 3], [5, 4], [6, 5]], feedback: 6 },
-  2: { carriers: [1, 3], connections: [[2, 1], [2, 2], [4, 3], [5, 4], [6, 5]], feedback: 2 },
-  3: { carriers: [1, 4], connections: [[2, 1], [3, 2], [5, 4], [6, 5]], feedback: 6 },
-  4: { carriers: [1, 4], connections: [[2, 1], [3, 2], [5, 4], [6, 5], [4, 4]], feedback: 4 },
-  5: { carriers: [1, 3, 5], connections: [[2, 1], [4, 3], [6, 5]], feedback: 6 },
-  6: { carriers: [1, 3, 5], connections: [[2, 1], [4, 3], [6, 5], [5, 5]], feedback: 5 },
-  7: { carriers: [1, 3], connections: [[2, 1], [4, 3], [5, 3], [6, 5]], feedback: 6 },
-  8: { carriers: [1, 3], connections: [[2, 1], [4, 3], [5, 3], [4, 4]], feedback: 4 },
-  9: { carriers: [1, 3], connections: [[2, 1], [2, 2], [4, 3], [5, 3], [6, 3]], feedback: 2 },
-  10: { carriers: [1, 4], connections: [[2, 1], [3, 1], [5, 4], [6, 4]], feedback: 3 },
-  11: { carriers: [1, 4], connections: [[2, 1], [3, 1], [5, 4], [6, 4], [6, 6]], feedback: 6 },
-  12: { carriers: [1, 3], connections: [[2, 1], [2, 2], [4, 3], [5, 3], [6, 3]], feedback: 2 },
-  13: { carriers: [1, 3], connections: [[2, 1], [4, 3], [5, 3], [6, 3], [6, 6]], feedback: 6 },
-  14: { carriers: [1, 3], connections: [[2, 1], [4, 3], [5, 4], [6, 4], [6, 6]], feedback: 6 },
-  15: { carriers: [1, 3], connections: [[2, 1], [2, 2], [4, 3], [5, 4], [6, 4]], feedback: 2 },
-  16: { carriers: [1], connections: [[2, 1], [3, 1], [5, 1], [4, 3], [6, 5]], feedback: 6 },
-  17: { carriers: [1], connections: [[2, 1], [2, 2], [3, 1], [5, 1], [4, 3], [6, 5]], feedback: 2 },
-  18: { carriers: [1], connections: [[2, 1], [3, 1], [4, 1], [5, 2], [6, 5]], feedback: 3 },
-  19: { carriers: [1, 4, 5], connections: [[2, 1], [3, 2], [6, 5]], feedback: 6 },
-  20: { carriers: [1, 2, 4], connections: [[3, 1], [3, 2], [3, 3], [5, 4], [6, 4]], feedback: 3 },
-  21: { carriers: [1, 2, 4, 5], connections: [[3, 1], [3, 2], [3, 3], [6, 5]], feedback: 3 },
-  22: { carriers: [1, 3, 4, 5], connections: [[2, 1], [6, 5]], feedback: 6 },
-  23: { carriers: [1, 2, 4, 5, 6], connections: [[3, 2]], feedback: 6 },
-  24: { carriers: [1, 2, 3, 4, 5], connections: [[6, 5]], feedback: 6 },
-  25: { carriers: [1, 2, 3, 4, 5, 6], connections: [[6, 6]], feedback: 6 },
-  26: { carriers: [1, 2, 4], connections: [[3, 2], [5, 4], [6, 5]], feedback: 6 },
-  27: { carriers: [1, 2, 4], connections: [[3, 2], [3, 3], [5, 4], [6, 4]], feedback: 3 },
-  28: { carriers: [1, 3, 6], connections: [[2, 1], [4, 3], [5, 4]], feedback: 5 },
-  29: { carriers: [1, 2, 3, 5], connections: [[4, 3], [6, 5]], feedback: 6 },
-  30: { carriers: [1, 2, 3, 6], connections: [[4, 3], [5, 4]], feedback: 5 },
-  31: { carriers: [1, 2, 3, 4, 5], connections: [[6, 5]], feedback: 6 },
-  32: { carriers: [1, 2, 3, 4, 5, 6], connections: [[6, 6]], feedback: 6 },
-};
+interface NodePosition {
+  x: number;
+  y: number;
+}
 
-const AlgorithmMatrix: React.FC<AlgorithmMatrixProps> = ({ algorithmId }) => {
-  const data = ROUTING_DATA[algorithmId] || ROUTING_DATA[1];
+interface Edge {
+  from: number;
+  to: number;
+  isTree: boolean; // True if this edge is part of the visual tree structure
+  isFeedback: boolean; // Explicit feedback loop
+}
 
-  const ranks: { [key: number]: number } = {};
-  
-  const calculateRank = (op: number, currentRank: number) => {
-    ranks[op] = Math.max(ranks[op] || 0, currentRank);
-    data.connections.forEach(([mod, car]) => {
-      if (car === op && mod !== op) calculateRank(mod, currentRank + 1);
+export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
+  const alg = ALGORITHMS[algorithmId - 1] || ALGORITHMS[0];
+
+  const { edges, positions, carriers } = useMemo(() => {
+    const numOps = 6;
+    const pos: Record<number, NodePosition> = {};
+    const placed = new Set<number>();
+    const treeEdges = new Set<string>(); // "from-to" strings
+
+    // 1. Identify Carriers (Roots)
+    // Sort to ensure consistent left-to-right order (e.g. 1, 3 for Alg 9)
+    const carrierList = [...alg.outputMix].sort((a, b) => a - b);
+    
+    // 2. Recursive Layout Function
+    // Returns the maximum X coordinate used by the subtree rooted at 'opIndex'
+    function layoutNode(opIndex: number, startX: number, rank: number, path: Set<number>): number {
+      if (placed.has(opIndex)) {
+        // If node is already placed, we don't move it. 
+        // Just return the current X to indicate no *new* width was consumed relative to startX.
+        // However, if we are trying to place a shared node, it effectively ends this branch's width expansion.
+        return startX - 1; 
+      }
+
+      pos[opIndex] = { x: startX, y: rank };
+      placed.add(opIndex);
+
+      // Get Modulators (Children in the tree)
+      // Filter out nodes that are already in the current recursion stack (cycles)
+      const modulators = alg.modulationMatrix[opIndex];
+      const validChildren = modulators.filter(m => !path.has(m));
+      
+      if (validChildren.length === 0) {
+        return startX;
+      }
+
+      let currentChildX = startX;
+      let maxSubTreeX = startX;
+
+      // "Fill from directly above to the right"
+      // The first child is placed directly above (same X).
+      // Subsequent children are placed to the right of the previous child's subtree.
+      validChildren.forEach((mod) => {
+        // Record this as a structural tree edge
+        treeEdges.add(`${mod}-${opIndex}`);
+        
+        const newPath = new Set(path).add(opIndex);
+        const childMaxX = layoutNode(mod, currentChildX, rank + 1, newPath);
+        
+        if (childMaxX > maxSubTreeX) maxSubTreeX = childMaxX;
+        
+        // Next sibling starts after the current child's subtree
+        currentChildX = childMaxX + 1;
+      });
+
+      // The width of this node is determined by its widest child subtree, 
+      // but must be at least its own position (startX).
+      return Math.max(startX, maxSubTreeX);
+    }
+
+    // 3. Layout each Carrier Tree
+    let nextTreeStartX = 0;
+    carrierList.forEach(c => {
+      const treeWidth = layoutNode(c, nextTreeStartX, 0, new Set());
+      // Start next tree after this tree's max width + 1 column gap
+      nextTreeStartX = treeWidth + 1;
     });
-  };
 
-  data.carriers.forEach(c => calculateRank(c, 0));
+    // 4. Generate Edges
+    const rawEdges: Edge[] = [];
+    alg.modulationMatrix.forEach((mods, carrier) => {
+      mods.forEach(mod => {
+        const isSelf = mod === carrier;
+        const isTree = treeEdges.has(`${mod}-${carrier}`);
+        
+        // If it's not a tree edge, it's a feedback or cross-modulation edge
+        // Usually visual feedback loops are those not in the main tree structure
+        let isFeedback = isSelf || !isTree;
 
-  const maxRank = Math.max(...Object.values(ranks), 0);
-  const opsByRank: number[][] = Array.from({ length: maxRank + 1 }, () => []);
-  Object.entries(ranks).forEach(([op, rank]) => opsByRank[rank].push(parseInt(op)));
-  
-  for(let i=1; i<=6; i++) if(ranks[i] === undefined) {
-    if (opsByRank[0]) opsByRank[0].push(i);
-  }
+        rawEdges.push({ from: mod, to: carrier, isTree, isFeedback });
+      });
+    });
 
+    return { edges: rawEdges, positions: pos, carriers: carrierList };
+  }, [alg]);
+
+  // Visual constants
   const boxW = 12;
   const boxH = 10;
-  const gapX = 4;
+  const gapX = 4; 
   const gapY = 12;
   const svgW = 100;
-  const svgH = 80;
-
-  const positions: { [key: number]: { x: number, y: number } } = {};
-  opsByRank.forEach((ops, rank) => {
-    const sortedOps = [...ops].sort((a, b) => a - b);
-    const rowWidth = (sortedOps.length * boxW + (sortedOps.length - 1) * gapX);
-    const startX = (svgW - rowWidth) / 2;
-    
-    sortedOps.forEach((op, i) => {
-      positions[op] = {
-        x: startX + i * (boxW + gapX),
-        y: svgH - 18 - rank * (boxH + gapY)
-      };
-    });
+  const svgH = 100;
+  
+  // Calculate centering offset
+  let minL = Infinity, maxL = -Infinity;
+  let maxRank = 0;
+  Object.values(positions).forEach(p => {
+    if (p.x < minL) minL = p.x;
+    if (p.x > maxL) maxL = p.x;
+    if (p.y > maxRank) maxRank = p.y;
   });
+  
+  const laneUnitPx = boxW + gapX; 
+  const totalContentWidth = (maxL - minL) * laneUnitPx + boxW;
+  const offsetX = (svgW - totalContentWidth) / 2;
+  const startYBase = svgH - 12; // Bottom margin for carriers
+
+  // Map logic coords to SVG coords
+  const getSvgPos = (id: number) => {
+    const p = positions[id];
+    if (!p) return { x: 0, y: 0 };
+    return {
+      x: offsetX + (p.x - minL) * laneUnitPx,
+      y: startYBase - p.y * (boxH + gapY)
+    };
+  };
 
   return (
-    <div className="bg-[#111] p-3 rounded border border-[#333] flex flex-col items-center justify-center h-full min-h-[120px]">
-      <div className="text-[7px] text-gray-600 font-bold uppercase mb-2 tracking-[0.2em]">Algorithm {algorithmId}</div>
-      <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible preserve-3d">
-        {/* Connections */}
-        {data.connections.map(([mod, car], i) => {
-            if (mod === car) return null;
-            const p1 = positions[mod];
-            const p2 = positions[car];
-            if(!p1 || !p2) return null;
-            return (
-                <line 
-                    key={i} 
-                    x1={p1.x + boxW/2} y1={p1.y + boxH} 
-                    x2={p2.x + boxW/2} y2={p2.y} 
-                    stroke="#00d4c1" strokeWidth="0.7" opacity="0.4"
-                />
-            );
-        })}
+    <div className="bg-[#0d0d0d] p-3 rounded border border-[#222] flex flex-col items-center justify-center h-full min-h-[140px] shadow-inner relative overflow-hidden group">
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[7px] text-gray-700 font-bold uppercase tracking-[0.4em] opacity-50 group-hover:opacity-100 transition-opacity">
+        ALGORITHM {algorithmId}
+      </div>
+      
+      <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible">
+        {/* Render Connections */}
+        {edges.map((edge, i) => {
+          const p1 = getSvgPos(edge.from);
+          const p2 = getSvgPos(edge.to);
+          
+          if (edge.isFeedback) {
+             const color = "#00d4c1";
+             // Self-loop
+             if (edge.from === edge.to) {
+               return (
+                 <g key={`fb-${i}`}>
+                   <path 
+                     d={`M ${p1.x + boxW} ${p1.y + boxH/2} L ${p1.x + boxW + 4} ${p1.y + boxH/2} L ${p1.x + boxW + 4} ${p1.y - 3} L ${p1.x + boxW/2} ${p1.y - 3} L ${p1.x + boxW/2} ${p1.y}`}
+                     fill="none" stroke={color} strokeWidth="1" className="drop-shadow-[0_0_3px_rgba(0,212,193,0.5)]"
+                   />
+                 </g>
+               );
+             } else {
+               // Complex feedback (side loop)
+               // Draw curve around the right side
+               const sideX = Math.max(p1.x, p2.x) + boxW + 3;
+               // Adjust height to not overlap too much
+               const topY = Math.min(p1.y, p2.y) - 4;
+               return (
+                 <g key={`fb-${i}`}>
+                    <path 
+                     d={`M ${p1.x + boxW} ${p1.y + boxH/2} L ${sideX} ${p1.y + boxH/2} L ${sideX} ${p2.y + boxH/2} L ${p2.x + boxW} ${p2.y + boxH/2}`}
+                     fill="none" stroke={color} strokeWidth="1" strokeDasharray="1.5,1" className="drop-shadow-[0_0_4px_rgba(0,212,193,0.6)]"
+                   />
+                 </g>
+               );
+             }
+          }
 
-        {/* Feedback loop */}
-        {data.feedback && positions[data.feedback] && (
-            <path 
-                d={`M ${positions[data.feedback].x + boxW} ${positions[data.feedback].y + boxH/2} 
-                   L ${positions[data.feedback].x + boxW + 3} ${positions[data.feedback].y + boxH/2}
-                   L ${positions[data.feedback].x + boxW + 3} ${positions[data.feedback].y - 3}
-                   L ${positions[data.feedback].x + boxW/2} ${positions[data.feedback].y - 3}
-                   L ${positions[data.feedback].x + boxW/2} ${positions[data.feedback].y}`}
-                fill="none" stroke="#00d4c1" strokeWidth="0.7" opacity="0.8"
-            />
-        )}
-
-        {/* Operators */}
-        {Object.entries(positions).map(([op, pos]) => (
-          <g key={op}>
-            <rect 
-                x={pos.x} y={pos.y} width={boxW} height={boxH} 
-                fill="#1a1a1a" stroke="#444" strokeWidth="0.5" rx="1" 
-            />
-            <text 
-                x={pos.x + boxW/2} y={pos.y + boxH/2 + 2.5} 
-                fontSize="6" fill="#00d4c1" textAnchor="middle" fontWeight="bold" 
-                fontFamily="Orbitron"
-            >
-              {op}
-            </text>
-          </g>
-        ))}
-
-        {/* Output Indicator Lines for Carriers */}
-        {data.carriers.map(c => {
-          if (!positions[c]) return null;
+          // Normal Tree Edge
           return (
             <line 
-              key={`out-${c}`}
-              x1={positions[c].x + boxW/2} y1={positions[c].y + boxH} 
-              x2={positions[c].x + boxW/2} y2={svgH - 6} 
-              stroke="#00d4c1" strokeWidth="0.5" strokeDasharray="1,1" opacity="0.2"
+              key={`edge-${i}`}
+              x1={p1.x + boxW/2} y1={p1.y + boxH}
+              x2={p2.x + boxW/2} y2={p2.y}
+              stroke="#00d4c1" strokeWidth="1" opacity="0.6"
             />
           );
         })}
+
+        {/* Output Bus */}
+        {(() => {
+          const carrierPos = carriers.map(c => {
+             const p = getSvgPos(c);
+             return { x: p.x + boxW/2, y: p.y + boxH };
+          });
+          if (carrierPos.length === 0) return null;
+          const busY = svgH - 10;
+          
+          return (
+            <g>
+              {carrierPos.map((p, i) => (
+                <line key={`bus-v-${i}`} x1={p.x} y1={p.y} x2={p.x} y2={busY} stroke="#00d4c1" strokeWidth="1" opacity="0.4" />
+              ))}
+              {carrierPos.length > 1 && (
+                 <line 
+                   x1={Math.min(...carrierPos.map(p=>p.x))} 
+                   y1={busY} 
+                   x2={Math.max(...carrierPos.map(p=>p.x))} 
+                   y2={busY} 
+                   stroke="#00d4c1" strokeWidth="1" opacity="0.4" 
+                 />
+              )}
+              <line x1={svgW/2} y1={busY} x2={svgW/2} y2={svgH - 2} stroke="#00d4c1" strokeWidth="1" opacity="0.4" strokeDasharray="2,2" />
+            </g>
+          );
+        })()}
+
+        {/* Render Operators */}
+        {Object.entries(positions).map(([opIdx, pos]) => {
+           const p = getSvgPos(parseInt(opIdx));
+           return (
+            <g key={opIdx}>
+              <rect 
+                x={p.x} y={p.y} width={boxW} height={boxH} 
+                fill="#151515" stroke="#333" strokeWidth="1" rx="1"
+              />
+              <text 
+                x={p.x + boxW/2} y={p.y + boxH/2 + 2.5} 
+                fontSize="6" fill="#00d4c1" textAnchor="middle" fontWeight="bold" 
+                fontFamily="Orbitron" className="select-none pointer-events-none"
+              >
+                {parseInt(opIdx) + 1}
+              </text>
+            </g>
+          );
+        })}
       </svg>
+      
+      <div className="absolute bottom-0 inset-x-4 h-px bg-gradient-to-r from-transparent via-dx7-teal/30 to-transparent"></div>
     </div>
   );
-};
-
-export default AlgorithmMatrix;
+}

@@ -28,71 +28,62 @@ export default function GlobalControlsPanel({ patch, onChange }: GlobalControlsP
   };
 
   return (
-    <div className="bg-[#2a241c] p-4 rounded border border-[#3d3326] flex flex-col gap-6 shadow-xl w-full h-full min-h-[400px]">
+    <div className="bg-[#1a1a1a] p-1.5 lg:p-1 border-none flex flex-col gap-2 shadow-xl w-full">
+      <div className="flex items-center justify-between border-b border-white/5 pb-0.5 mb-0.5">
+        <h3 className="text-[8px] font-bold text-gray-500 uppercase tracking-widest font-orbitron">Global Tone generator</h3>
+      </div>
       {/* LFO Modulation Section */}
-      <div className="flex flex-col gap-6">
-        {/* Unified 3x2 Grid for Vertical Alignment */}
-        <div className="grid grid-cols-3 gap-y-6 gap-x-2 items-start justify-items-center">
-          {/* Row 1: Wave, P Mod Sens, Speed */}
-          <div className="flex flex-col items-center gap-1.5 shrink-0 pt-0.5">
-            <button 
+      <div className="flex flex-col gap-3 lg:gap-1.5">
+        <div className="grid grid-cols-3 gap-y-3 lg:gap-y-1 gap-x-1 items-start justify-items-center">
+          <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
+            <button
               onClick={() => onChange({ lfoWaveform: (patch.lfoWaveform + 1) % LFO_WAVEFORMS.length })}
-              className="w-12 h-10 bg-black rounded border border-white/5 flex items-center justify-center hover:border-dx7-teal/40 transition-all shadow-inner"
+              className="w-10 h-8 lg:w-9 lg:h-7 bg-black rounded-sm border border-white/5 flex items-center justify-center hover:border-dx7-teal/40 transition-all"
             >
               {renderWaveIcon()}
             </button>
-            <span className="text-[7.5px] font-bold text-gray-400 uppercase tracking-widest">Wave</span>
+            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-tighter">Wave</span>
           </div>
-          <ControlKnob label="P Mod Sens" min={0} max={7} value={patch.lfoPitchModSens} onChange={v => onChange({ lfoPitchModSens: v })} size={34} />
-          <ControlKnob label="Speed" min={0} max={99} value={patch.lfoSpeed} onChange={v => onChange({ lfoSpeed: v })} size={34} />
+          <ControlKnob label="P Mod" min={0} max={7} value={patch.lfoPitchModSens} onChange={v => onChange({ lfoPitchModSens: v })} size={28} />
+          <ControlKnob label="Speed" min={0} max={99} value={patch.lfoSpeed} onChange={v => onChange({ lfoSpeed: v })} size={28} />
 
-          {/* Row 2: Delay, PMD, AMD */}
-          <ControlKnob label="Delay" min={0} max={99} value={patch.lfoDelay} onChange={v => onChange({ lfoDelay: v })} size={34} />
-          <ControlKnob label="PMD" min={0} max={99} value={patch.lfoPitchModDepth} onChange={v => onChange({ lfoPitchModDepth: v })} size={34} />
-          <ControlKnob label="AMD" min={0} max={99} value={patch.lfoAmpModDepth} onChange={v => onChange({ lfoAmpModDepth: v })} size={34} />
-        </div>
+          <ControlKnob label="Delay" min={0} max={99} value={patch.lfoDelay} onChange={v => onChange({ lfoDelay: v })} size={28} />
+          <ControlKnob label="PMD" min={0} max={99} value={patch.lfoPitchModDepth} onChange={v => onChange({ lfoPitchModDepth: v })} size={28} />
+          <ControlKnob label="AMD" min={0} max={99} value={patch.lfoAmpModDepth} onChange={v => onChange({ lfoAmpModDepth: v })} size={28} />
 
-        {/* Row 3: LFO Sync, OSC Sync (2 Toggles) */}
-        <div className="flex justify-center gap-8 pt-2">
-          <ToggleSwitch label="LFO Key Sync" active={patch.lfoSync} onChange={v => onChange({ lfoSync: v })} />
-          <ToggleSwitch label="OSC Key Sync" active={patch.oscKeySync} onChange={v => onChange({ oscKeySync: v })} />
+          {/* Row 3: Sync Switches */}
+          <div className="flex flex-col items-center gap-1">
+            <ToggleSwitch label="LFO Sync" active={patch.lfoSync} onChange={v => onChange({ lfoSync: v })} />
+          </div>
+          <div /> {/* Empty middle column */}
+          <div className="flex flex-col items-center gap-1">
+            <ToggleSwitch label="OSC Sync" active={patch.oscKeySync} onChange={v => onChange({ oscKeySync: v })} />
+          </div>
         </div>
       </div>
 
-      <div className="h-px bg-white/5 w-full"></div>
+      <div className="h-px bg-white/5 w-full my-1"></div>
 
       {/* Voice/Tone Section */}
-      <div className="flex flex-col gap-4">
-        {/* Row 4: Tune, Cutoff, Reso (3 Knobs) */}
-        <div className="grid grid-cols-3 gap-2">
-          <ControlKnob label="Tune" min={-50} max={50} value={patch.fineTune} onChange={v => onChange({ fineTune: v })} displayValue={v => (v / 100).toFixed(2)} size={32} />
-          <ControlKnob label="Cutoff" min={0} max={99} value={patch.cutoff} onChange={v => onChange({ cutoff: v })} size={32} />
-          <ControlKnob label="Reso" min={0} max={99} value={patch.resonance} onChange={v => onChange({ resonance: v })} size={32} />
+      <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-3 gap-1 lg:gap-0.5">
+          <ControlKnob label="Tune" min={-50} max={50} value={patch.fineTune} onChange={v => onChange({ fineTune: v })} displayValue={v => (v / 100).toFixed(2)} size={26} />
+          <ControlKnob label="Cut" min={0} max={99} value={patch.cutoff} onChange={v => onChange({ cutoff: v })} size={26} />
+          <ControlKnob label="Res" min={0} max={99} value={patch.resonance} onChange={v => onChange({ resonance: v })} size={26} />
         </div>
 
-        {/* Row 5: Level, Transpose (2 Knobs) */}
-        <div className="flex justify-center gap-12">
-          <ControlKnob label="Level" min={0} max={99} value={patch.masterLevel} onChange={v => onChange({ masterLevel: v })} size={36} />
-          <ControlKnob label="Transpose" min={0} max={48} value={patch.transpose} onChange={v => onChange({ transpose: v })} displayValue={v => (v - 24).toString()} size={36} />
-        </div>
-
-        {/* Row 6: Monophonic (1 Toggle) */}
-        <div className="flex justify-center py-2 bg-black/10 rounded-sm border border-white/5">
-           <ToggleSwitch label="Monophonic" active={patch.mono} onChange={v => onChange({ mono: v })} />
+        <div className="grid grid-cols-3 gap-1 lg:gap-0.5 items-end">
+          <ControlKnob label="Vol" min={0} max={99} value={patch.masterLevel} onChange={v => onChange({ masterLevel: v })} size={28} />
+          <ControlKnob label="Trans" min={0} max={48} value={patch.transpose} onChange={v => onChange({ transpose: v })} displayValue={v => (v - 24).toString()} size={28} />
+          <div className="flex flex-col items-center gap-1 pb-1">
+            <ToggleSwitch label="Mono" active={patch.mono} onChange={v => onChange({ mono: v })} />
+          </div>
         </div>
       </div>
-      
-      {/* Decorative footer label */}
-      <div className="flex justify-center items-center gap-3 text-[7px] text-gray-500 font-bold uppercase tracking-[0.2em] border-t border-white/5 pt-3 mt-auto">
-         <div className="flex gap-1">
-            <div className="w-0.5 h-0.5 bg-dx7-teal/40 rounded-full"></div>
-            <div className="w-0.5 h-0.5 bg-dx7-teal/40 rounded-full"></div>
-         </div>
-         Global Tone Generator
-         <div className="flex gap-1">
-            <div className="w-0.5 h-0.5 bg-dx7-teal/40 rounded-full"></div>
-            <div className="w-0.5 h-0.5 bg-dx7-teal/40 rounded-full"></div>
-         </div>
+
+      {/* Small label */}
+      <div className="text-[7px] text-gray-600 font-bold uppercase tracking-widest text-center mt-auto opacity-50">
+        TONE / LFO
       </div>
     </div>
   );

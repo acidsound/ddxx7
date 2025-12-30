@@ -8,9 +8,9 @@ interface KeyboardProps {
 }
 
 const KEY_TO_NOTE: Record<string, number> = {
-  'z': 0, 's': 1, 'x': 2, 'd': 3, 'c': 4, 'v': 5, 'g': 6, 'b': 7, 'h': 8, 'n': 9, 'j': 10, 'm': 11, 
-  ',': 12, 'l': 13, '.': 14, ';': 15, '/': 16, 
-  'q': 12, '2': 13, 'w': 14, '3': 15, 'e': 16, 'r': 17, '5': 18, 't': 19, '6': 20, 
+  'z': 0, 's': 1, 'x': 2, 'd': 3, 'c': 4, 'v': 5, 'g': 6, 'b': 7, 'h': 8, 'n': 9, 'j': 10, 'm': 11,
+  ',': 12, 'l': 13, '.': 14, ';': 15, '/': 16,
+  'q': 12, '2': 13, 'w': 14, '3': 15, 'e': 16, 'r': 17, '5': 18, 't': 19, '6': 20,
   'y': 21, '7': 22, 'u': 23, 'i': 24, '9': 25, 'o': 26, '0': 27, 'p': 28
 };
 
@@ -93,39 +93,45 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
   const getNoteName = (n: number) => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][n % 12];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#333] select-none z-[200] pb-2 flex flex-col transition-all duration-300">
+    <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#333] select-none z-[200] pb-2 flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 bg-[#0a0a0a] border-b border-[#222]">
         <div className="flex items-center gap-4">
-          <button onClick={() => setIsExpanded(!isExpanded)} className={`w-8 h-8 flex items-center justify-center rounded border border-[#333] transition-all hover:bg-white/5 ${isExpanded ? 'text-dx7-teal border-dx7-teal/50' : 'text-gray-500'}`}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
+          <button onClick={() => setIsExpanded(!isExpanded)} className={`w-7 h-7 flex items-center justify-center rounded border border-[#333] transition-all hover:bg-white/5 ${isExpanded ? 'text-dx7-teal border-dx7-teal/50' : 'text-gray-500'}`}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
           <div className="flex items-center bg-black rounded border border-[#222] overflow-hidden">
-            <button onClick={() => setOctave(prev => Math.max(0, prev - 1))} className="px-3 py-1 hover:bg-white/5 text-sm border-r border-[#222] text-gray-400 font-bold">-</button>
-            <div className="px-4 py-1 text-[10px] font-mono text-dx7-teal min-w-[70px] text-center uppercase tracking-widest font-bold">C{octave}-C{octave+2}</div>
-            <button onClick={() => setOctave(prev => Math.min(8, prev + 1))} className="px-3 py-1 hover:bg-white/5 text-sm text-gray-400 font-bold">+</button>
+            <button onClick={() => setOctave(prev => Math.max(0, prev - 1))} className="px-2 py-0.5 hover:bg-white/5 text-xs border-r border-[#222] text-gray-400 font-bold">-</button>
+            <div className="px-3 py-0.5 text-[9px] font-mono text-dx7-teal min-w-[60px] text-center uppercase tracking-widest font-bold">C{octave}-C{octave + 2}</div>
+            <button onClick={() => setOctave(prev => Math.min(8, prev + 1))} className="px-2 py-0.5 hover:bg-white/5 text-xs text-gray-400 font-bold">+</button>
           </div>
         </div>
-        <div className="flex items-center gap-3 flex-grow max-w-[400px] mx-4">
-          <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Velocity</span>
-          <div className="flex-grow flex items-center gap-3 bg-black/50 px-3 py-1 rounded-full border border-[#222]">
-            <input type="range" min="1" max="127" value={velocity} onChange={(e) => onVelocityChange(parseInt(e.target.value))} className="w-full h-1 bg-[#222] rounded-lg appearance-none cursor-pointer accent-dx7-teal"/>
-            <span className="text-[11px] font-mono text-dx7-teal w-8 font-bold text-right">{velocity}</span>
+        <div className="flex items-center gap-2 flex-grow max-w-[320px] ml-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600 shrink-0">
+            <rect x="2" y="3" width="20" height="18" rx="2" ry="2" />
+            <line x1="7" y1="3" x2="7" y2="15" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+            <line x1="17" y1="3" x2="17" y2="15" />
+            <line x1="2" y1="15" x2="22" y2="15" />
+          </svg>
+          <div className="flex-grow flex items-center gap-2 bg-black/50 px-2 py-0.5 rounded-full border border-[#222] h-7">
+            <input type="range" min="1" max="127" value={velocity} onChange={(e) => onVelocityChange(parseInt(e.target.value))} className="dx7-slider" />
+            <span className="text-[10px] font-mono text-dx7-teal w-6 font-bold text-right shrink-0">{velocity}</span>
           </div>
         </div>
       </div>
-      
+
       {/* Keyboard Container with touch-action: none to prevent scrolling */}
-      <div 
-        className={`relative w-full flex items-stretch overflow-hidden transition-all duration-300 ${isExpanded ? 'h-32 md:h-48 opacity-100' : 'h-0 opacity-0'}`}
+      <div
+        className={`relative w-full flex items-stretch overflow-hidden transition-[height,opacity] duration-300 ${isExpanded ? 'h-32 md:h-48 lg:h-36 opacity-100' : 'h-0 opacity-0'}`}
         style={{ touchAction: 'none' }}
       >
         {keys.map((n) => {
           if (isBlackKey(n)) return null;
           const active = activeNotes.has(n + (octave * 12));
           return (
-            <div 
-              key={n} 
-              className={`flex-grow border-r border-black/10 relative cursor-pointer ${active ? 'bg-dx7-teal' : 'bg-white hover:bg-gray-100'}`} 
+            <div
+              key={n}
+              className={`flex-grow border-r border-black/10 relative cursor-pointer ${active ? 'bg-dx7-teal' : 'bg-white hover:bg-gray-100'}`}
               onPointerDown={(e) => onKeyPointerDown(e, n)}
               onPointerEnter={(e) => onKeyPointerEnter(e, n)}
               onPointerLeave={(e) => onKeyPointerLeave(e, n)}
@@ -142,8 +148,8 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
             const active = activeNotes.has(n + (octave * 12));
             return (
               <div key={n} className="relative z-10" style={{ width: '0%', flexBasis: '0%' }}>
-                <div 
-                  className={`absolute top-0 -left-[14px] md:-left-[18px] w-[28px] md:w-[36px] h-[60%] border border-black rounded-b shadow-lg pointer-events-auto transition-all ${active ? 'bg-dx7-teal' : 'bg-gradient-to-b from-[#111] to-[#333]'}`} 
+                <div
+                  className={`absolute top-0 -left-[14px] md:-left-[18px] w-[28px] md:w-[36px] h-[60%] border border-black rounded-b shadow-lg pointer-events-auto transition-all ${active ? 'bg-dx7-teal' : 'bg-gradient-to-b from-[#111] to-[#333]'}`}
                   onPointerDown={(e) => { e.stopPropagation(); onKeyPointerDown(e, n); }}
                   onPointerEnter={(e) => { e.stopPropagation(); onKeyPointerEnter(e, n); }}
                   onPointerLeave={(e) => { e.stopPropagation(); onKeyPointerLeave(e, n); }}

@@ -29,7 +29,7 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
     // 1. Identify Carriers (Roots)
     // Sort to ensure consistent left-to-right order (e.g. 1, 3 for Alg 9)
     const carrierList = [...alg.outputMix].sort((a, b) => a - b);
-    
+
     // 2. Recursive Layout Function
     // Returns the maximum X coordinate used by the subtree rooted at 'opIndex'
     function layoutNode(opIndex: number, startX: number, rank: number, path: Set<number>): number {
@@ -37,7 +37,7 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
         // If node is already placed, we don't move it. 
         // Just return the current X to indicate no *new* width was consumed relative to startX.
         // However, if we are trying to place a shared node, it effectively ends this branch's width expansion.
-        return startX - 1; 
+        return startX - 1;
       }
 
       pos[opIndex] = { x: startX, y: rank };
@@ -47,7 +47,7 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
       // Filter out nodes that are already in the current recursion stack (cycles)
       const modulators = alg.modulationMatrix[opIndex];
       const validChildren = modulators.filter(m => !path.has(m));
-      
+
       if (validChildren.length === 0) {
         return startX;
       }
@@ -61,12 +61,12 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
       validChildren.forEach((mod) => {
         // Record this as a structural tree edge
         treeEdges.add(`${mod}-${opIndex}`);
-        
+
         const newPath = new Set(path).add(opIndex);
         const childMaxX = layoutNode(mod, currentChildX, rank + 1, newPath);
-        
+
         if (childMaxX > maxSubTreeX) maxSubTreeX = childMaxX;
-        
+
         // Next sibling starts after the current child's subtree
         currentChildX = childMaxX + 1;
       });
@@ -90,7 +90,7 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
       mods.forEach(mod => {
         const isSelf = mod === carrier;
         const isTree = treeEdges.has(`${mod}-${carrier}`);
-        
+
         // If it's not a tree edge, it's a feedback or cross-modulation edge
         // Usually visual feedback loops are those not in the main tree structure
         let isFeedback = isSelf || !isTree;
@@ -103,26 +103,30 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
   }, [alg]);
 
   // Visual constants
-  const boxW = 12;
-  const boxH = 10;
-  const gapX = 4; 
-  const gapY = 12;
-  const svgW = 100;
-  const svgH = 100;
-  
+  const boxW = 80;
+  const boxH = 64;
+  const gapX = 16;
+  const gapY = 54;
+  const svgW = 800; // Increased to provide more side room
+  const svgH = 600; // Increased to prevent bottom clipping
+
   // Calculate centering offset
   let minL = Infinity, maxL = -Infinity;
   let maxRank = 0;
-  Object.values(positions).forEach(p => {
+  (Object.values(positions) as NodePosition[]).forEach(p => {
     if (p.x < minL) minL = p.x;
     if (p.x > maxL) maxL = p.x;
     if (p.y > maxRank) maxRank = p.y;
   });
-  
-  const laneUnitPx = boxW + gapX; 
+
+  const laneUnitPx = boxW + gapX;
   const totalContentWidth = (maxL - minL) * laneUnitPx + boxW;
+  const totalContentHeight = (maxRank) * (boxH + gapY) + boxH;
+
   const offsetX = (svgW - totalContentWidth) / 2;
-  const startYBase = svgH - 12; // Bottom margin for carriers
+  // Position the bottom-most nodes (rank 0) so they aren't cut off
+  const startYBase = svgH - ((svgH - totalContentHeight) / 2) - 20;
+  const busY = startYBase + boxH + 10;
 
   // Map logic coords to SVG coords
   const getSvgPos = (id: number) => {
@@ -135,53 +139,53 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
   };
 
   return (
-    <div className="bg-[#0d0d0d] p-3 rounded border border-[#222] flex flex-col items-center justify-center h-full min-h-[140px] shadow-inner relative overflow-hidden group">
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[7px] text-gray-700 font-bold uppercase tracking-[0.4em] opacity-50 group-hover:opacity-100 transition-opacity">
+    <div className="bg-[#0b0b0b] p-3 lg:p-2 rounded border border-white/5 flex flex-col items-center justify-center h-full min-h-[140px] shadow-inner relative group">
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] text-gray-700 font-bold uppercase tracking-[0.4em] opacity-50 group-hover:opacity-100 transition-opacity">
         ALGORITHM {algorithmId}
       </div>
-      
-      <svg width="100%" height="100%" viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible">
+
+      <svg viewBox={`0 0 ${svgW} ${svgH}`} className="h-full overflow-visible" preserveAspectRatio="xMidYMid meet">
         {/* Render Connections */}
         {edges.map((edge, i) => {
           const p1 = getSvgPos(edge.from);
           const p2 = getSvgPos(edge.to);
-          
+
           if (edge.isFeedback) {
-             const color = "#00d4c1";
-             // Self-loop
-             if (edge.from === edge.to) {
-               return (
-                 <g key={`fb-${i}`}>
-                   <path 
-                     d={`M ${p1.x + boxW} ${p1.y + boxH/2} L ${p1.x + boxW + 4} ${p1.y + boxH/2} L ${p1.x + boxW + 4} ${p1.y - 3} L ${p1.x + boxW/2} ${p1.y - 3} L ${p1.x + boxW/2} ${p1.y}`}
-                     fill="none" stroke={color} strokeWidth="1" className="drop-shadow-[0_0_3px_rgba(0,212,193,0.5)]"
-                   />
-                 </g>
-               );
-             } else {
-               // Complex feedback (side loop)
-               // Draw curve around the right side
-               const sideX = Math.max(p1.x, p2.x) + boxW + 3;
-               // Adjust height to not overlap too much
-               const topY = Math.min(p1.y, p2.y) - 4;
-               return (
-                 <g key={`fb-${i}`}>
-                    <path 
-                     d={`M ${p1.x + boxW} ${p1.y + boxH/2} L ${sideX} ${p1.y + boxH/2} L ${sideX} ${p2.y + boxH/2} L ${p2.x + boxW} ${p2.y + boxH/2}`}
-                     fill="none" stroke={color} strokeWidth="1" strokeDasharray="1.5,1" className="drop-shadow-[0_0_4px_rgba(0,212,193,0.6)]"
-                   />
-                 </g>
-               );
-             }
+            const color = "#00d4c1";
+            // Self-loop
+            if (edge.from === edge.to) {
+              return (
+                <g key={`fb-${i}`}>
+                  <path
+                    d={`M ${p1.x + boxW} ${p1.y + boxH / 2} L ${p1.x + boxW + 12} ${p1.y + boxH / 2} L ${p1.x + boxW + 12} ${p1.y - 12} L ${p1.x + boxW / 2} ${p1.y - 12} L ${p1.x + boxW / 2} ${p1.y}`}
+                    fill="none" stroke={color} strokeWidth="3" className="drop-shadow-[0_0_6px_rgba(0,212,193,0.5)]"
+                  />
+                </g>
+              );
+            } else {
+              // Complex feedback (side loop)
+              // Draw curve around the right side
+              const sideX = Math.max(p1.x, p2.x) + boxW + 16;
+              // Adjust height to not overlap too much
+              const topY = Math.min(p1.y, p2.y) - 4;
+              return (
+                <g key={`fb-${i}`}>
+                  <path
+                    d={`M ${p1.x + boxW} ${p1.y + boxH / 2} L ${sideX} ${p1.y + boxH / 2} L ${sideX} ${p2.y + boxH / 2} L ${p2.x + boxW} ${p2.y + boxH / 2}`}
+                    fill="none" stroke={color} strokeWidth="3" strokeDasharray="5,2" className="drop-shadow-[0_0_8px_rgba(0,212,193,0.6)]"
+                  />
+                </g>
+              );
+            }
           }
 
           // Normal Tree Edge
           return (
-            <line 
+            <line
               key={`edge-${i}`}
-              x1={p1.x + boxW/2} y1={p1.y + boxH}
-              x2={p2.x + boxW/2} y2={p2.y}
-              stroke="#00d4c1" strokeWidth="1" opacity="0.6"
+              x1={p1.x + boxW / 2} y1={p1.y + boxH}
+              x2={p2.x + boxW / 2} y2={p2.y}
+              stroke="#00d4c1" strokeWidth="3" opacity="0.8"
             />
           );
         })}
@@ -189,25 +193,24 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
         {/* Output Bus */}
         {(() => {
           const carrierPos = carriers.map(c => {
-             const p = getSvgPos(c);
-             return { x: p.x + boxW/2, y: p.y + boxH };
+            const p = getSvgPos(c);
+            return { x: p.x + boxW / 2, y: p.y + boxH };
           });
           if (carrierPos.length === 0) return null;
-          const busY = svgH - 10;
-          
+
           return (
             <g>
               {carrierPos.map((p, i) => (
-                <line key={`bus-v-${i}`} x1={p.x} y1={p.y} x2={p.x} y2={busY} stroke="#00d4c1" strokeWidth="1" opacity="0.4" />
+                <line key={`bus-v-${i}`} x1={p.x} y1={p.y} x2={p.x} y2={busY} stroke="#00d4c1" strokeWidth="2.5" opacity="0.5" />
               ))}
               {carrierPos.length > 1 && (
-                 <line 
-                   x1={Math.min(...carrierPos.map(p=>p.x))} 
-                   y1={busY} 
-                   x2={Math.max(...carrierPos.map(p=>p.x))} 
-                   y2={busY} 
-                   stroke="#00d4c1" strokeWidth="1" opacity="0.4" 
-                 />
+                <line
+                  x1={Math.min(...carrierPos.map(p => p.x))}
+                  y1={busY}
+                  x2={Math.max(...carrierPos.map(p => p.x))}
+                  y2={busY}
+                  stroke="#00d4c1" strokeWidth="2.5" opacity="0.5"
+                />
               )}
             </g>
           );
@@ -215,16 +218,16 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
 
         {/* Render Operators */}
         {Object.entries(positions).map(([opIdx, pos]) => {
-           const p = getSvgPos(parseInt(opIdx));
-           return (
+          const p = getSvgPos(parseInt(opIdx));
+          return (
             <g key={opIdx}>
-              <rect 
-                x={p.x} y={p.y} width={boxW} height={boxH} 
-                fill="#151515" stroke="#333" strokeWidth="1" rx="1"
+              <rect
+                x={p.x} y={p.y} width={boxW} height={boxH}
+                fill="#151515" stroke="#444" strokeWidth="3" rx="4"
               />
-              <text 
-                x={p.x + boxW/2} y={p.y + boxH/2 + 2.5} 
-                fontSize="6" fill="#00d4c1" textAnchor="middle" fontWeight="bold" 
+              <text
+                x={p.x + boxW / 2} y={p.y + boxH / 2 + 8}
+                fontSize="28" fill="#00d4c1" textAnchor="middle" fontWeight="bold"
                 fontFamily="Orbitron" className="select-none pointer-events-none"
               >
                 {parseInt(opIdx) + 1}
@@ -233,7 +236,7 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
           );
         })}
       </svg>
-      
+
       <div className="absolute bottom-0 inset-x-4 h-px bg-gradient-to-r from-transparent via-dx7-teal/30 to-transparent"></div>
     </div>
   );

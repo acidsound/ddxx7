@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { OperatorParams } from '../types';
 import ControlKnob from './ControlKnob';
+import ControlFader from './ControlFader';
 
 interface OperatorPanelProps {
   key?: React.Key;
@@ -82,110 +83,98 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, onChange }
   };
 
   return (
-    <div className={`flex items-center h-[280px] border-b border-[#222] transition-all relative w-full overflow-hidden ${isActive ? 'bg-[#141414]' : 'bg-[#0f0f0f] opacity-60'}`}>
+    <div className={`flex items-center border-b border-white/10 transition-all relative w-full ${isActive ? 'bg-[#1a1a1a]' : 'bg-[#0f0f0f] opacity-60'}`}>
 
       {/* Sidebar Toggle Section */}
-      <div className="flex flex-col items-center justify-center min-w-[80px] w-[80px] h-full border-r border-[#222] bg-black/40 shrink-0 z-10">
+      <div className="flex flex-col items-center justify-center min-w-[80px] w-[80px] lg:min-w-[40px] lg:w-[40px] h-full border-r border-white/5 bg-black/40 shrink-0 z-10">
         <button
           onClick={toggleOperator}
-          className={`w-10 h-10 rounded flex items-center justify-center border transition-all font-orbitron font-bold text-sm active:scale-90 select-none ${isActive ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_15px_rgba(0,212,193,0.3)]' : 'bg-[#080808] text-gray-700 border-[#1a1a1a]'}`}
+          className={`w-10 h-10 lg:w-7 lg:h-7 rounded-sm flex items-center justify-center border transition-all font-orbitron font-bold text-sm lg:text-[10px] active:scale-90 select-none ${isActive ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_15px_rgba(0,212,193,0.3)]' : 'bg-[#080808] text-gray-700 border-[#1a1a1a]'}`}
         >
           {index}
         </button>
       </div>
 
       {/* Control Surface */}
-      <div className="flex-grow h-full flex items-center overflow-x-auto no-scrollbar px-8 py-4">
-        <div className="flex items-center gap-8 min-w-max">
+      <div className="flex-grow flex items-center overflow-x-auto lg:overflow-x-auto no-scrollbar px-2.5 lg:px-1 pt-3 pb-2">
+        <div className="flex items-center gap-2.5 lg:gap-0.5 min-w-max">
 
-          {/* Operator Tuning Block */}
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-4 items-center bg-[#1d1813] p-4 rounded-lg border border-[#2d251d] shadow-2xl">
-              <ControlKnob label="A MOD SENS" min={0} max={3} value={params.lfoAmpModSens} onChange={v => update('lfoAmpModSens', v)} size={42} />
-              <ControlKnob label="KEY VEL" min={0} max={7} value={params.velocitySens} onChange={v => update('velocitySens', v)} size={42} />
-              <ControlKnob label="LEVEL" min={0} max={99} value={params.volume} onChange={v => update('volume', v)} size={54} />
+          <div className="flex gap-2.5 items-center shrink-0">
+            <div className="flex gap-1.5 items-center bg-[#1d1813] p-1 rounded-sm border border-[#2d251d] h-[72px]">
+              <ControlKnob label="VEL" min={0} max={7} value={params.velocitySens} onChange={v => update('velocitySens', v)} size={32} />
+              <ControlKnob label="A.MOD" min={0} max={3} value={params.lfoAmpModSens} onChange={v => update('lfoAmpModSens', v)} size={32} />
+              <ControlKnob label="LEVEL" min={0} max={99} value={params.volume} onChange={v => update('volume', v)} size={32} />
             </div>
 
-            <div className="flex gap-4 items-center bg-[#0a0a0a] p-3 px-4 rounded-lg border border-white/5 shadow-inner">
-              <div className="flex flex-col items-center gap-1.5">
+            <div className="flex gap-1.5 items-center bg-[#0a0a0a] p-1 px-2 rounded-sm border border-white/5 h-[72px]">
+              <div className="flex flex-col items-center gap-1">
                 <button
                   onClick={() => update('oscMode', params.oscMode === 0 ? 1 : 0)}
-                  className={`w-10 h-8 rounded border transition-all flex items-center justify-center font-bold text-[8px] tracking-tight ${params.oscMode === 1 ? 'border-dx7-teal bg-dx7-teal/20 text-dx7-teal' : 'border-[#333] text-gray-500'}`}
+                  className={`w-7 h-6 rounded-sm border transition-all flex items-center justify-center font-bold text-[7px] tracking-tight ${params.oscMode === 1 ? 'border-dx7-teal bg-dx7-teal/20 text-dx7-teal' : 'border-[#333] text-gray-500'}`}
                 >
-                  {params.oscMode === 0 ? 'RATIO' : 'FIXED'}
+                  {params.oscMode === 0 ? 'RT' : 'FX'}
                 </button>
-                <span className="text-[7px] text-gray-700 font-bold uppercase">MODE</span>
+                <span className="text-[6px] text-gray-700 font-bold uppercase">MODE</span>
               </div>
-              <ControlKnob label="COARSE" min={0} max={31} value={params.freqCoarse} onChange={v => update('freqCoarse', v)} size={38} />
-              <ControlKnob label="FINE" min={0} max={99} value={params.freqFine} onChange={v => update('freqFine', v)} size={38} />
-              <ControlKnob label="DETUNE" min={0} max={14} value={params.detune} onChange={v => update('detune', v)} displayValue={params.detune - 7} size={38} />
+              <ControlKnob label="COARSE" min={0} max={31} value={params.freqCoarse} onChange={v => update('freqCoarse', v)} size={32} />
+              <ControlKnob label="FINE" min={0} max={99} value={params.freqFine} onChange={v => update('freqFine', v)} size={32} />
+              <ControlKnob label="DET" min={0} max={14} value={params.detune} onChange={v => update('detune', v)} displayValue={params.detune - 7} size={32} />
             </div>
           </div>
 
           {/* Keyboard Scaling Block */}
-          <div className="flex flex-col gap-4 p-5 bg-[#1d1813] rounded-lg border border-[#2d251d] shadow-2xl min-w-[240px]">
-            <div className="grid grid-cols-3 gap-x-4 items-start justify-items-center">
-              <ControlKnob label="L DEPTH" min={0} max={99} value={params.keyScaleDepthL} onChange={v => update('keyScaleDepthL', v)} size={34} />
-              <ControlKnob label="BREAKPOINT" min={0} max={99} value={params.keyScaleBreakpoint} onChange={v => update('keyScaleBreakpoint', v)} size={38} displayValue={getNoteName} />
-              <ControlKnob label="R DEPTH" min={0} max={99} value={params.keyScaleDepthR} onChange={v => update('keyScaleDepthR', v)} size={34} />
+          <div className="flex gap-2.5 p-1 bg-[#1d1813] rounded-sm border border-[#2d251d] shrink-0 h-[72px] items-center">
+            <ControlKnob label="L.DEP" min={0} max={99} value={params.keyScaleDepthL} onChange={v => update('keyScaleDepthL', v)} size={32} />
+            <div className="flex flex-col items-center gap-0.5 group shrink-0">
+              <button
+                onClick={() => update('keyScaleCurveL', (params.keyScaleCurveL + 1) % 4)}
+                className="w-7 h-6 bg-black/80 rounded-sm border border-[#330] p-1 hover:border-dx7-teal/40 transition-colors"
+              >
+                <CurveIcon type={params.keyScaleCurveL} />
+              </button>
+              <span className="text-[6px] text-gray-500 font-bold uppercase">L-CRV</span>
             </div>
-            <div className="grid grid-cols-3 gap-x-4 items-end justify-items-center">
-              <div className="flex flex-col items-center gap-1.5 group">
-                <button
-                  onClick={() => update('keyScaleCurveL', (params.keyScaleCurveL + 1) % 4)}
-                  className="w-12 h-9 bg-black/80 rounded border border-[#333] p-2 hover:border-dx7-teal/40 transition-colors"
-                >
-                  <CurveIcon type={params.keyScaleCurveL} />
-                </button>
-                <span className="text-[8px] text-white/70 font-bold">{CURVE_NAMES[params.keyScaleCurveL]}</span>
-                <span className="text-[7px] text-gray-500 font-bold uppercase">L CURVE</span>
-              </div>
-              <ControlKnob label="RATE SCALE" min={0} max={7} value={params.keyScaleRate} onChange={v => update('keyScaleRate', v)} size={34} />
-              <div className="flex flex-col items-center gap-1.5 group">
-                <button
-                  onClick={() => update('keyScaleCurveR', (params.keyScaleCurveR + 1) % 4)}
-                  className="w-12 h-9 bg-black/80 rounded border border-[#333] p-2 hover:border-dx7-teal/40 transition-colors"
-                >
-                  <CurveIcon type={params.keyScaleCurveR} mirrored={true} />
-                </button>
-                <span className="text-[8px] text-white/70 font-bold">{CURVE_NAMES[params.keyScaleCurveR]}</span>
-                <span className="text-[7px] text-gray-500 font-bold uppercase">R CURVE</span>
-              </div>
+            <ControlKnob label="BRK" min={0} max={99} value={params.keyScaleBreakpoint} onChange={v => update('keyScaleBreakpoint', v)} size={32} displayValue={getNoteName} />
+            <ControlKnob label="RATE" min={0} max={7} value={params.keyScaleRate} onChange={v => update('keyScaleRate', v)} size={32} />
+            <div className="flex flex-col items-center gap-0.5 group shrink-0">
+              <button
+                onClick={() => update('keyScaleCurveR', (params.keyScaleCurveR + 1) % 4)}
+                className="w-7 h-6 bg-black/80 rounded-sm border border-[#330] p-1 hover:border-dx7-teal/40 transition-colors"
+              >
+                <CurveIcon type={params.keyScaleCurveR} mirrored={true} />
+              </button>
+              <span className="text-[6px] text-gray-500 font-bold uppercase">R-CRV</span>
             </div>
+            <ControlKnob label="R.DEP" min={0} max={99} value={params.keyScaleDepthR} onChange={v => update('keyScaleDepthR', v)} size={32} />
           </div>
 
           {/* Envelope Section */}
-          <div className="flex items-center gap-8 pl-4 border-l border-white/5">
-            <div className="w-[180px] bg-black rounded border border-black/40 shadow-inner p-1 h-[140px] flex items-center justify-center relative">
-              <svg viewBox="0 0 160 90" preserveAspectRatio="none" className="w-full h-full">
+          <div className="flex items-center gap-2 pl-2 border-l border-white/5 shrink-0 h-[72px]">
+            <div className="w-[100px] bg-black rounded-sm border border-black/40 shadow-inner p-0.5 h-full flex items-center justify-center relative">
+              <svg viewBox="0 0 160 90" preserveAspectRatio="none" className="w-full h-full opacity-60">
                 <path d={graphData.fillD} fill="#00d4c1" fillOpacity="0.15" />
-                <path d={graphData.lineD} fill="none" stroke="#00d4c1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_4px_rgba(0,212,193,0.7)]" />
+                <path d={graphData.lineD} fill="none" stroke="#00d4c1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="absolute bottom-2 right-2 text-[8px] font-bold text-gray-700 font-mono opacity-50 uppercase">ENV {index}</span>
             </div>
 
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col items-center">
-                <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mb-2">LEVEL</span>
-                <div className="flex gap-4">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[6px] text-gray-500 font-bold uppercase tracking-tighter">LEVEL</span>
+              <div className="flex flex-col items-center bg-black/30 p-1 rounded-sm border border-white/5 h-[62px] justify-center">
+                <div className="flex gap-2 items-center px-1">
                   {params.levels.map((l, i) => (
-                    <div key={`l-${i}`} className="flex flex-col items-center">
-                      <ControlKnob label="" value={l} min={0} max={99} onChange={v => updateArray('levels', i, v)} size={30} />
-                      <span className="text-[8px] font-bold text-gray-700 mt-1">{i + 1}</span>
-                    </div>
+                    <ControlFader key={`l-${i}`} value={l} min={0} max={99} onChange={v => updateArray('levels', i, v)} height={44} />
                   ))}
                 </div>
               </div>
-              <div className="flex flex-col items-center">
-                <div className="flex gap-4">
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[6px] text-gray-500 font-bold uppercase tracking-tighter">RATE</span>
+              <div className="flex flex-col items-center bg-black/30 p-1 rounded-sm border border-white/5 h-[62px] justify-center">
+                <div className="flex gap-2 items-center px-1">
                   {params.rates.map((r, i) => (
-                    <div key={`r-${i}`} className="flex flex-col items-center">
-                      <span className="text-[8px] font-bold text-gray-700 mb-1">{i + 1}</span>
-                      <ControlKnob label="" value={r} min={0} max={99} onChange={v => updateArray('rates', i, v)} size={30} />
-                    </div>
+                    <ControlFader key={`r-${i}`} value={r} min={0} max={99} onChange={v => updateArray('rates', i, v)} height={44} />
                   ))}
                 </div>
-                <span className="text-[8px] text-gray-600 font-bold uppercase tracking-widest mt-2">RATE</span>
               </div>
             </div>
           </div>

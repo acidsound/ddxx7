@@ -211,7 +211,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <header className="bg-black p-3 flex justify-between items-center border-b border-[#222] shrink-0 z-50">
+      <header className="bg-black px-3 flex justify-between items-center border-b border-[#222] shrink-0 z-50">
         <div className="flex items-center gap-6">
           <div className="text-2xl font-orbitron font-bold text-dx7-teal tracking-tighter">DDXX7</div>
           <div className="flex bg-[#111] rounded p-0.5 border border-[#333]">
@@ -220,66 +220,70 @@ const App: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setIsMidiPanelOpen(!isMidiPanelOpen)} className={`p-2.5 rounded-full border transition-all ${isMidiPanelOpen ? 'bg-dx7-teal/20 border-dx7-teal text-dx7-teal shadow-[0_0_12px_rgba(0,212,193,0.3)]' : 'border-[#333] text-gray-500 hover:text-dx7-teal'}`}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="4" /></svg></button>
-          <button onClick={() => fileInputRef.current?.click()} className="p-2.5 text-gray-500 hover:text-dx7-teal transition-colors"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /></svg></button>
+          <button onClick={() => setIsMidiPanelOpen(!isMidiPanelOpen)} className={`p-1.5 rounded-full border transition-all ${isMidiPanelOpen ? 'bg-dx7-teal/20 border-dx7-teal text-dx7-teal shadow-[0_0_12px_rgba(0,212,193,0.3)]' : 'border-[#333] text-gray-500 hover:text-dx7-teal'}`} title="MIDI Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="8" cy="10" r="1.2" fill="currentColor" stroke="none" /><circle cx="16" cy="10" r="1.2" fill="currentColor" stroke="none" /><circle cx="7" cy="14" r="1.2" fill="currentColor" stroke="none" /><circle cx="17" cy="14" r="1.2" fill="currentColor" stroke="none" /></svg></button>
+          <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-gray-500 hover:text-dx7-teal transition-colors" title="Import SysEx/Patch File"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" /></svg></button>
         </div>
       </header>
 
-      {/* pb-32 on small, pb-48 on medium to match keyboard height */}
-      <main className="flex-grow overflow-y-auto bg-[#1a1a1a] flex flex-col gap-6 pt-4 md:pt-6 pb-40 md:pb-56 custom-scrollbar">
+      {/* pb-32 on small, pb-48 on medium to match keyboard height, no pb on lg to fit screen */}
+      <main className="flex-grow overflow-y-auto lg:overflow-hidden bg-[#0a0a0a] flex flex-col gap-6 md:gap-6 lg:gap-0 pt-4 md:pt-6 lg:pt-0 pb-40 md:pb-56 lg:pb-0 custom-scrollbar">
         {activeViewVal === 'edit' ? (
-          <div className="w-full flex flex-col gap-6">
-            <div className="px-2 md:px-4 max-w-[1440px] mx-auto w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6 items-stretch">
-              {/* Left Column: Voice Info & Algorithm */}
-              <div className="lg:col-span-3 flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-end px-1">
-                    <div className="text-[10px] text-gray-600 font-bold uppercase tracking-[0.3em]">Voice Info</div>
-                    <div className="flex gap-2 bg-[#111] p-0.5 rounded border border-[#333]">
-                      <button onClick={() => handlePatchSwitch((currentPatchIndex - 1 + library.length) % library.length)} className="w-7 h-5 flex items-center justify-center bg-black hover:bg-[#222] text-dx7-teal border border-[#333] rounded-sm transition-all active:scale-95 membrane-button"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
-                      <button onClick={() => handlePatchSwitch((currentPatchIndex + 1) % library.length)} className="w-7 h-5 flex items-center justify-center bg-black hover:bg-[#222] text-dx7-teal border border-[#333] rounded-sm transition-all active:scale-95 membrane-button"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+          <div className="w-full flex-grow flex flex-col lg:flex-row lg:pb-[209px] lg:overflow-hidden bg-[#0a0a0a]">
+            {/* Left Column: Global Settings (Voice, Algorithm, Tone, Pitch Env) */}
+            <div className="w-full lg:w-[55%] flex flex-col lg:overflow-y-auto custom-scrollbar lg:border-b border-white/10">
+              <div class="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center lg:sticky lg:top-0 lg:z-20"><h4 class="text-[10px] font-bold text-gray-600 uppercase tracking-[0.4em]">Patch info</h4></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2 lg:gap-0">
+                {/* Column 1: Voice & Algorithm */}
+                <div className="flex flex-col bg-[#111]/40 p-2 lg:p-2 border-r border-b border-white/5">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-end px-1">
+                      <div className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">Voice Info</div>
+                      <div className="flex gap-1 bg-black/60 p-0.5 rounded border border-white/5">
+                        <button onClick={() => handlePatchSwitch((currentPatchIndex - 1 + library.length) % library.length)} className="w-6 h-4 flex items-center justify-center bg-black hover:bg-[#222] text-dx7-teal border border-white/10 rounded-sm transition-all active:scale-95"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+                        <button onClick={() => handlePatchSwitch((currentPatchIndex + 1) % library.length)} className="w-6 h-4 flex items-center justify-center bg-black hover:bg-[#222] text-dx7-teal border border-white/10 rounded-sm transition-all active:scale-95"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+                      </div>
+                    </div>
+                    <div className={`lcd-screen w-full h-[110px] lg:h-[84px] p-3 rounded border-[3px] border-[#050505] relative flex flex-col justify-between overflow-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] ${isSendingToHW ? 'brightness-125' : ''}`}>
+                      <div className="flex justify-between items-center text-[8px] font-bold tracking-[0.1em]"><span className="opacity-40 uppercase tracking-widest text-[#7efab4]">DX7 SIM</span>{isAutoSyncEnabled && <div className="text-dx7-teal animate-pulse">SYNC</div>}</div>
+                      <div className="flex-grow flex items-center">
+                        <input className="bg-transparent text-lg lg:text-base font-mono w-full outline-none uppercase tracking-[0.15em] text-[#7efab4] font-bold" value={patch.name} onChange={e => updatePatch({ name: e.target.value.toUpperCase() })} />
+                      </div>
+                      <div className="flex justify-between text-[9px] font-mono opacity-80 border-t border-[#7efab4]/10 pt-1"><span>ALG: {patch.algorithm.toString().padStart(2, '0')}</span><span>V: 12</span></div>
                     </div>
                   </div>
-                  <div className={`lcd-screen w-full h-[120px] md:h-[140px] p-4 rounded border-[6px] border-[#080808] relative flex flex-col justify-between overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.6)] ${isSendingToHW ? 'brightness-125' : ''}`}>
-                    <div className="flex justify-between items-center text-[9px] font-bold tracking-[0.2em]"><span className="opacity-40 uppercase">INTERNAL</span>{isAutoSyncEnabled && <div className="text-dx7-teal animate-pulse">SYNC</div>}</div>
-                    <div className="flex-grow flex items-center">
-                      <input className="bg-transparent text-xl md:text-2xl font-mono w-full outline-none uppercase tracking-[0.2em] text-[#7efab4] font-bold" value={patch.name} onChange={e => updatePatch({ name: e.target.value.toUpperCase() })} />
-                    </div>
-                    <div className="flex justify-between text-[10px] font-mono opacity-80 pt-2 border-t border-[#7efab4]/10"><span>ALG: {patch.algorithm.toString().padStart(2, '0')}</span><span>VOICES: 12</span></div>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-4 flex-grow">
-                  <div className="flex-grow min-h-[160px] md:min-h-[220px]">
-                    <AlgorithmMatrix algorithmId={patch.algorithm} />
-                  </div>
-                  <div className="bg-[#111] p-4 rounded border border-[#333] flex justify-around items-center shadow-lg">
-                    <ControlKnob label="Algorithm" min={1} max={32} value={patch.algorithm} onChange={v => updatePatch({ algorithm: v })} size={36} />
-                    <ControlKnob label="Feedback" min={0} max={7} value={patch.feedback} onChange={v => updatePatch({ feedback: v })} size={36} />
-                  </div>
-                </div>
-              </div>
 
-              {/* Right Column: Global Tone & Pitch Envelope (Combined on Tablet) */}
-              <div className="md:col-span-1 lg:col-span-9 grid grid-cols-1 lg:grid-cols-9 gap-4 md:gap-6">
-                <div className="lg:col-span-4 flex">
+                  <div className="flex flex-col gap-1.5 mt-2 lg:mt-0.5">
+                    <div className="h-[260px] bg-black/20 rounded-sm p-0.5">
+                      <AlgorithmMatrix algorithmId={patch.algorithm} />
+                    </div>
+                    <div className="bg-black/40 p-2 lg:p-1 rounded-sm border border-white/5 flex justify-around items-center shadow-lg">
+                      <ControlKnob label="Alg" min={1} max={32} value={patch.algorithm} onChange={v => updatePatch({ algorithm: v })} size={28} />
+                      <ControlKnob label="Fback" min={0} max={7} value={patch.feedback} onChange={v => updatePatch({ feedback: v })} size={28} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 2: Tone & Pitch Stack */}
+                <div className="flex flex-col border-r border-b border-white/5">
                   <GlobalControlsPanel patch={patch} onChange={updatePatch} />
-                </div>
-
-                <div className="lg:col-span-5 flex">
+                  <div className="h-px bg-white/5 w-full"></div>
                   <PitchEnvelopePanel patch={patch} onChange={c => updatePatch({ pitchEnvelope: { ...patch.pitchEnvelope, ...c } })} />
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-0 border-t border-[#333] bg-[#0d0d0d]">
-              <div className="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center">
+            {/* Right Column: Operators 1-6 */}
+            <div className="w-full flex flex-col border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0d0d0d] lg:h-full lg:overflow-y-auto custom-scrollbar">
+              <div className="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center lg:sticky lg:top-0 lg:z-20">
                 <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.4em]">Operator Configuration (1-6)</h4>
               </div>
-              {patch.operators.map((op, i) => (
-                <OperatorPanel key={i + 1} index={i + 1} params={op} onChange={p => {
-                  const next = [...patch.operators]; next[i] = p; updatePatch({ operators: next });
-                }} />
-              ))}
+              <div className="flex flex-col">
+                {patch.operators.map((op, i) => (
+                  <OperatorPanel key={i + 1} index={i + 1} params={op} onChange={p => {
+                    const next = [...patch.operators]; next[i] = p; updatePatch({ operators: next });
+                  }} />
+                ))}
+              </div>
             </div>
           </div>
         ) : (

@@ -209,7 +209,6 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
                    stroke="#00d4c1" strokeWidth="1" opacity="0.4" 
                  />
               )}
-              <line x1={svgW/2} y1={busY} x2={svgW/2} y2={svgH - 2} stroke="#00d4c1" strokeWidth="1" opacity="0.4" strokeDasharray="2,2" />
             </g>
           );
         })()}

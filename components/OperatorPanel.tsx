@@ -3,6 +3,7 @@ import { OperatorParams } from '../types';
 import ControlKnob from './ControlKnob';
 
 interface OperatorPanelProps {
+  key?: React.Key;
   index: number;
   params: OperatorParams;
   onChange: (newParams: OperatorParams) => void;
@@ -27,8 +28,8 @@ const CurveIcon: React.FC<{ type: number; mirrored?: boolean }> = ({ type, mirro
     "M 4 4 L 16 16"        // Linear falling
   ];
   return (
-    <svg 
-      viewBox="0 0 20 20" 
+    <svg
+      viewBox="0 0 20 20"
       className="w-full h-full text-dx7-teal opacity-80 group-hover:opacity-100 transition-opacity"
       style={{ transform: mirrored ? 'scaleX(-1)' : 'none' }}
     >
@@ -37,7 +38,7 @@ const CurveIcon: React.FC<{ type: number; mirrored?: boolean }> = ({ type, mirro
   );
 };
 
-export default function OperatorPanel({ index, params, onChange }: OperatorPanelProps) {
+const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, onChange }) => {
   const update = (field: keyof OperatorParams, value: any) => {
     onChange({ ...params, [field]: value });
   };
@@ -58,7 +59,7 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
     const t2 = getTime(params.rates[1]);
     const t3 = getTime(params.rates[2]);
     const t4 = getTime(params.rates[3]);
-    
+
     const totalT = t1 + t2 + t3 + t4;
     const scaleX = width / totalT;
 
@@ -70,7 +71,7 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
 
     const lineD = `M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y}`;
     const fillD = `${lineD} L ${width} ${height} L 0 ${height} Z`;
-    
+
     return { lineD, fillD };
   }, [params.rates, params.levels]);
 
@@ -82,10 +83,10 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
 
   return (
     <div className={`flex items-center h-[280px] border-b border-[#222] transition-all relative w-full overflow-hidden ${isActive ? 'bg-[#141414]' : 'bg-[#0f0f0f] opacity-60'}`}>
-      
+
       {/* Sidebar Toggle Section */}
       <div className="flex flex-col items-center justify-center min-w-[80px] w-[80px] h-full border-r border-[#222] bg-black/40 shrink-0 z-10">
-        <button 
+        <button
           onClick={toggleOperator}
           className={`w-10 h-10 rounded flex items-center justify-center border transition-all font-orbitron font-bold text-sm active:scale-90 select-none ${isActive ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_15px_rgba(0,212,193,0.3)]' : 'bg-[#080808] text-gray-700 border-[#1a1a1a]'}`}
         >
@@ -96,7 +97,7 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
       {/* Control Surface */}
       <div className="flex-grow h-full flex items-center overflow-x-auto no-scrollbar px-8 py-4">
         <div className="flex items-center gap-8 min-w-max">
-          
+
           {/* Operator Tuning Block */}
           <div className="flex flex-col gap-4">
             <div className="flex gap-4 items-center bg-[#1d1813] p-4 rounded-lg border border-[#2d251d] shadow-2xl">
@@ -104,10 +105,10 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
               <ControlKnob label="KEY VEL" min={0} max={7} value={params.velocitySens} onChange={v => update('velocitySens', v)} size={42} />
               <ControlKnob label="LEVEL" min={0} max={99} value={params.volume} onChange={v => update('volume', v)} size={54} />
             </div>
-            
+
             <div className="flex gap-4 items-center bg-[#0a0a0a] p-3 px-4 rounded-lg border border-white/5 shadow-inner">
               <div className="flex flex-col items-center gap-1.5">
-                <button 
+                <button
                   onClick={() => update('oscMode', params.oscMode === 0 ? 1 : 0)}
                   className={`w-10 h-8 rounded border transition-all flex items-center justify-center font-bold text-[8px] tracking-tight ${params.oscMode === 1 ? 'border-dx7-teal bg-dx7-teal/20 text-dx7-teal' : 'border-[#333] text-gray-500'}`}
                 >
@@ -130,7 +131,7 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
             </div>
             <div className="grid grid-cols-3 gap-x-4 items-end justify-items-center">
               <div className="flex flex-col items-center gap-1.5 group">
-                <button 
+                <button
                   onClick={() => update('keyScaleCurveL', (params.keyScaleCurveL + 1) % 4)}
                   className="w-12 h-9 bg-black/80 rounded border border-[#333] p-2 hover:border-dx7-teal/40 transition-colors"
                 >
@@ -141,7 +142,7 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
               </div>
               <ControlKnob label="RATE SCALE" min={0} max={7} value={params.keyScaleRate} onChange={v => update('keyScaleRate', v)} size={34} />
               <div className="flex flex-col items-center gap-1.5 group">
-                <button 
+                <button
                   onClick={() => update('keyScaleCurveR', (params.keyScaleCurveR + 1) % 4)}
                   className="w-12 h-9 bg-black/80 rounded border border-[#333] p-2 hover:border-dx7-teal/40 transition-colors"
                 >
@@ -156,11 +157,11 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
           {/* Envelope Section */}
           <div className="flex items-center gap-8 pl-4 border-l border-white/5">
             <div className="w-[180px] bg-black rounded border border-black/40 shadow-inner p-1 h-[140px] flex items-center justify-center relative">
-               <svg viewBox="0 0 160 90" preserveAspectRatio="none" className="w-full h-full">
-                  <path d={graphData.fillD} fill="#00d4c1" fillOpacity="0.15" />
-                  <path d={graphData.lineD} fill="none" stroke="#00d4c1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_4px_rgba(0,212,193,0.7)]" />
-               </svg>
-               <span className="absolute bottom-2 right-2 text-[8px] font-bold text-gray-700 font-mono opacity-50 uppercase">ENV {index}</span>
+              <svg viewBox="0 0 160 90" preserveAspectRatio="none" className="w-full h-full">
+                <path d={graphData.fillD} fill="#00d4c1" fillOpacity="0.15" />
+                <path d={graphData.lineD} fill="none" stroke="#00d4c1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-[0_0_4px_rgba(0,212,193,0.7)]" />
+              </svg>
+              <span className="absolute bottom-2 right-2 text-[8px] font-bold text-gray-700 font-mono opacity-50 uppercase">ENV {index}</span>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -170,7 +171,7 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
                   {params.levels.map((l, i) => (
                     <div key={`l-${i}`} className="flex flex-col items-center">
                       <ControlKnob label="" value={l} min={0} max={99} onChange={v => updateArray('levels', i, v)} size={30} />
-                      <span className="text-[8px] font-bold text-gray-700 mt-1">{i+1}</span>
+                      <span className="text-[8px] font-bold text-gray-700 mt-1">{i + 1}</span>
                     </div>
                   ))}
                 </div>
@@ -179,7 +180,7 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
                 <div className="flex gap-4">
                   {params.rates.map((r, i) => (
                     <div key={`r-${i}`} className="flex flex-col items-center">
-                      <span className="text-[8px] font-bold text-gray-700 mb-1">{i+1}</span>
+                      <span className="text-[8px] font-bold text-gray-700 mb-1">{i + 1}</span>
                       <ControlKnob label="" value={r} min={0} max={99} onChange={v => updateArray('rates', i, v)} size={30} />
                     </div>
                   ))}
@@ -193,4 +194,6 @@ export default function OperatorPanel({ index, params, onChange }: OperatorPanel
       </div>
     </div>
   );
-}
+};
+
+export default OperatorPanel;

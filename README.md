@@ -1,20 +1,92 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  
+  # DDXX7
+  **A high-fidelity FM synthesis simulator and SysEx editor.**
+  
+  [![Vite](https://img.shields.io/badge/Vite-6.2.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+  [![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.1-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 </div>
 
-# Run and deploy your AI Studio app
+---
 
-This contains everything you need to run your app locally.
+## 🎹 Overview
 
-View your app in AI Studio: https://ai.studio/apps/drive/11zy7vNgsPAHpbsX9VvPEMOXDcqqcUUMr
+**DDXX7** is a powerful web-based FM synthesizer that brings the classic 6-operator frequency modulation synthesis into your browser. Designed with both sound design and hardware integration in mind, it serves as both a high-fidelity simulator and a comprehensive SysEx editor for classic FM synthesizers.
 
-## Run Locally
+> "A high-fidelity FM synthesis simulator and SysEx editor featuring a 6-operator FM synthesis engine, WebMIDI integration, and retro-inspired UI."
 
-**Prerequisites:**  Node.js
+## ✨ Key Features
 
+- **6-Operator Engine**: Faithfully recreated FM synthesis engine with 32 classic algorithms.
+- **Real-time Editor**: Precise control over Operator parameters including Frequency (Coarse/Fine/Detune), Envelopes (Rate/Level), Level Scaling, and Sensitivity.
+- **WebMIDI Integration**: Connect your MIDI controllers for expressive performance with support for Note On/Off, Velocity, Pitch Bend, Modulation Wheel, and Aftertouch.
+- **SysEx Support**: Import and Export `.syx` files. Sync your patches in real-time with compatible hardware synthesizers.
+- **Retro-Inspired UI**: A modern take on the classic DX-style aesthetic, featuring a high-contrast LCD screen, membrane-style buttons, and a tactile control layout.
+- **Low Latency**: Built with the latest Web Audio API and custom `AudioWorklet` for responsive, performance-ready synthesis.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🛠 Tech Stack
+
+- **Framework**: [React 19](https://react.dev/)
+- **Build Tool**: [Vite 6](https://vite.dev/)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & Vanilla CSS
+- **Audio Engine**: Web Audio API (`AudioWorklet`)
+- **Integration**: WebMIDI API
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (Latest LTS recommended)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/ddxx7.git
+   cd ddxx7
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+## 🎛 Usage
+
+### Editing Patches
+Switch to the **Editor** tab to modify operator parameters. The Algorithm Matrix provides a visual representation of how operators interact. Adjust envelopes, pitch settings, and global parameters to sculpt your sound.
+
+### Library Management
+Use the **Library** tab to browse through internal patches. You can load your own `.syx` files by clicking the import button in the header.
+
+### MIDI & Hardware Sync
+Open the **MIDI Configuration** panel to select your input/output devices. Enable **Auto-Sync** to transmit parameter changes to your hardware synthesizer via SysEx in real-time.
+
+---
+
+## 🇰🇷 한국어 요약 (Summary in Korean)
+
+**DDXX7**은 브라우저에서 바로 사용 가능한 강력한 FM 합성 시뮬레이터이자 SysEx 에디터입니다. 클래식 6-오퍼레이터 FM 합성 엔진을 정밀하게 재현하였으며, 하드웨어 신디사이저와의 연동을 위한 강력한 MIDI 기능을 제공합니다.
+
+### 주요 특징
+- **6-오퍼레이터 엔진**: 32가지 클래식 알고리즘을 지원하는 고정밀 FM 엔진.
+- **실시간 에디터**: 주파수, 엔벨로프, 레벨 등 모든 파라미터를 브라우저에서 즉시 수정 가능.
+- **WebMIDI 연동**: MIDI 컨트롤러를 통한 연주 및 실시간 파라미터 제어.
+- **SysEx 지원**: `.syx` 파일 임포트/익스포트 및 하드웨어 장치와의 실시간 데이터 동기화.
+- **레트로 디자인**: DX 시리즈의 미학을 현대적으로 재해석한 프리미엄 UI.
+
+---
+
+<div align="center">
+  <p>FM 신디사이저 애호가들을 위해 ❤️로 제작되었습니다.</p>
+</div>

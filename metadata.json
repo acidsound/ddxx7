@@ -1,6 +1,6 @@
 {
-  "name": "DX7 Digital FM Synthesizer & Editor",
-  "description": "A high-fidelity Yamaha DX7 simulator and SysEx editor featuring a 6-operator FM synthesis engine, WebMIDI integration, and retro-inspired UI.",
+  "name": "DDXX7",
+  "description": "DDXX7: A high-fidelity FM synthesis simulator and SysEx editor featuring a 6-operator FM synthesis engine, WebMIDI integration, and retro-inspired UI.",
   "requestFramePermissions": [
     "microphone"
   ]

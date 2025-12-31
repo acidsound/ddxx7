@@ -73,7 +73,7 @@ class LFO {
 
     updateDelayTimes() {
         const lfoDelay = this.patch.lfoDelay;
-        const lfoRate = (SAMPLE_RATE * 2) / 100; // LFO updates every 100 samples (2x rate for longer delay times)
+        const lfoRate = SAMPLE_RATE / 100; // LFO updates every 100 samples (as per standard dx7-synth-js)
 
         // Delay times from dx7-synth-js
         this.delayOnsetTime = (lfoRate * 0.001753 * Math.pow(lfoDelay, 3.10454) + 169.344 - 168) / 1000;
@@ -88,7 +88,7 @@ class LFO {
 
         // Only update LFO every 100 samples (like reference implementation)
         if (this.counter % 100 === 0) {
-            const freq = (LFO_FREQUENCY_TABLE[lfoSpeed] || 0.062506) * 0.1; // 0.1x to significantly slow down vibrato
+            const freq = LFO_FREQUENCY_TABLE[lfoSpeed] || 0.062506;
             const phaseStep = (Math.PI * 2 * freq) / (SAMPLE_RATE / 100);
 
             // Calculate raw waveform amplitude (-1 to 1)
@@ -522,7 +522,7 @@ class DX7Processor extends AudioWorkletProcessor {
             console.log('DX7 Processor running at', SAMPLE_RATE, 'Hz');
         }
 
-        const ctrlMod = Math.min(1.0, this.modWheel + this.aftertouch);
+        const ctrlMod = Math.min(1.27, this.modWheel + this.aftertouch);
 
         for (let i = 0; i < outL.length; i++) {
             let l = 0, r = 0;

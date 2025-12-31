@@ -440,6 +440,7 @@ class DX7Processor extends AudioWorkletProcessor {
         this.sustain = false;
         this.lfo = null;
         this.algorithms = null; // Received via message
+        this.counter = 0; // For metering timing
 
         this.port.onmessage = e => {
             const { type, data, algorithms } = e.data;
@@ -500,6 +501,21 @@ class DX7Processor extends AudioWorkletProcessor {
             }
             outL[i] = l; outR[i] = r;
         }
+
+        // Metering: Send operator levels every ~46ms (2048 samples)
+        if (this.counter % 2048 === 0) {
+            const levels = new Float32Array(6);
+            // Find max level for each operator across all active voices
+            for (const v of this.voices) {
+                for (let op = 0; op < 6; op++) {
+                    const val = Math.abs(v.opOutputs[op]);
+                    if (val > levels[op]) levels[op] = val;
+                }
+            }
+            this.port.postMessage({ type: 'opLevels', data: levels });
+        }
+        this.counter += outL.length;
+
         return true;
     }
 }

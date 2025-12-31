@@ -30,9 +30,15 @@ const App: React.FC = () => {
   const engineRef = useRef<DX7Engine | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastSyncTimeRef = useRef<number>(0);
+  const [opLevels, setOpLevels] = useState<Float32Array>(new Float32Array(6));
 
   useEffect(() => {
     engineRef.current = new DX7Engine(PRESETS[0]);
+    engineRef.current.onOpLevels((levels) => {
+      // requestAnimationFrame to throttle UI updates if needed, but react set state is already batched usually.
+      // However, 50ms updates are fine.
+      setOpLevels(levels);
+    });
   }, []);
 
   useEffect(() => {
@@ -279,7 +285,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 {patch.operators.map((op, i) => (
-                  <OperatorPanel key={i + 1} index={i + 1} params={op} onChange={p => {
+                  <OperatorPanel key={i + 1} index={i + 1} params={op} level={opLevels[i]} onChange={p => {
                     const next = [...patch.operators]; next[i] = p; updatePatch({ operators: next });
                   }} />
                 ))}

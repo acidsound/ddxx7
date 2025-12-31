@@ -19,14 +19,20 @@ export class DX7Engine {
         alert(msg); throw new Error(msg);
       }
 
-      // Use relative path for better compatibility
-      await this.context.audioWorklet.addModule('dx7-processor.js');
+      // Use relative path with cache busting
+      await this.context.audioWorklet.addModule(`dx7-processor.js?v=${Date.now()}`);
 
       this.node = new AudioWorkletNode(this.context, 'dx7-processor', {
         outputChannelCount: [2],
         numberOfInputs: 0,
         numberOfOutputs: 1
       });
+
+      this.node.port.onmessage = (e) => {
+        if (e.data.type === 'opLevels' && this.opLevelsHandler) {
+          this.opLevelsHandler(e.data.data);
+        }
+      };
 
       this.node.connect(this.context.destination);
 
@@ -49,8 +55,14 @@ export class DX7Engine {
   noteOff(note: number) { this.node?.port.postMessage({ type: 'noteOff', data: { note } }); }
   panic() { this.node?.port.postMessage({ type: 'panic' }); }
 
+  private opLevelsHandler: ((levels: Float32Array) => void) | null = null;
+
   setPitchBend(val: number) { this.node?.port.postMessage({ type: 'pitchBend', data: val }); }
   setModWheel(val: number) { this.node?.port.postMessage({ type: 'modWheel', data: val }); }
   setAftertouch(val: number) { this.node?.port.postMessage({ type: 'aftertouch', data: val }); }
   setSustain(val: boolean) { this.node?.port.postMessage({ type: 'sustain', data: val }); }
+
+  public onOpLevels(callback: (levels: Float32Array) => void) {
+    this.opLevelsHandler = callback;
+  }
 }

@@ -7,6 +7,7 @@ interface OperatorPanelProps {
   key?: React.Key;
   index: number;
   params: OperatorParams;
+  level?: number;
   onChange: (newParams: OperatorParams) => void;
 }
 
@@ -39,7 +40,7 @@ const CurveIcon: React.FC<{ type: number; mirrored?: boolean }> = ({ type, mirro
   );
 };
 
-const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, onChange }) => {
+const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, onChange }) => {
   const update = (field: keyof OperatorParams, value: any) => {
     onChange({ ...params, [field]: value });
   };
@@ -86,13 +87,22 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, onChange }
     <div className={`flex items-center border-b border-white/10 transition-all relative w-full ${isActive ? 'bg-[#1a1a1a]' : 'bg-[#0f0f0f] opacity-60'}`}>
 
       {/* Sidebar Toggle Section */}
-      <div className="flex flex-col items-center justify-center min-w-[80px] w-[80px] lg:min-w-[40px] lg:w-[40px] h-full border-r border-white/5 bg-black/40 shrink-0 z-10">
+      <div className="flex flex-col items-center justify-center min-w-[80px] w-[80px] lg:min-w-[40px] lg:w-[40px] h-full border-r border-white/5 bg-black/40 shrink-0 z-10 relative overflow-hidden">
+        
         <button
           onClick={toggleOperator}
-          className={`w-10 h-10 lg:w-7 lg:h-7 rounded-sm flex items-center justify-center border transition-all font-orbitron font-bold text-sm lg:text-[10px] active:scale-90 select-none ${isActive ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_15px_rgba(0,212,193,0.3)]' : 'bg-[#080808] text-gray-700 border-[#1a1a1a]'}`}
+          className={`relative z-10 w-10 h-10 lg:w-7 lg:h-7 rounded-sm flex items-center justify-center border transition-all font-orbitron font-bold text-sm lg:text-[10px] active:scale-90 select-none ${isActive ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_15px_rgba(0,212,193,0.3)]' : 'bg-[#080808] text-gray-700 border-[#1a1a1a]'}`}
         >
           {index}
         </button>
+
+        {/* High Visibility Level Meter (Right Edge) */}
+        <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-black/50">
+           <div 
+             className="absolute bottom-0 left-0 right-0 bg-dx7-teal shadow-[0_0_8px_#00d4c1] transition-all duration-75 ease-out" 
+             style={{ height: `${Math.min(100, (level || 0) * 150)}%` }} // Increased sensitivity (1.5x)
+           />
+        </div>
       </div>
 
       {/* Control Surface */}

@@ -44,26 +44,101 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
     onNoteOff(finalNote);
   }, [onNoteOff, octave]);
 
-  // Pointer Event Handlers for Keys
+  // Touch Handling State
+  const touchedNotesRef = useRef<Set<number>>(new Set());
+
+  const keyboardRef = useRef<HTMLDivElement>(null);
+
+  // Unified Touch Handler (Now attached via ref for passive: false)
+  const handleTouch = useCallback((e: TouchEvent) => {
+    // Prevent default to avoid scrolling and duplicate mouse events
+    if (e.cancelable && e.type !== 'touchend') e.preventDefault();
+
+    // Check which keys are currently touched
+    const currentTouched = new Set<number>();
+
+    // Loop through all active touches
+    for (let i = 0; i < e.touches.length; i++) {
+      const touch = e.touches[i];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+
+      // Find the closest parent with data-note attribute
+      const keyEl = el?.closest('[data-note]') as HTMLElement;
+      if (keyEl && keyEl.dataset.note) {
+        currentTouched.add(parseInt(keyEl.dataset.note, 10));
+      }
+    }
+
+    // Determine diff
+    const prev = touchedNotesRef.current;
+
+    prev.forEach(note => {
+      if (!currentTouched.has(note)) {
+        onNoteOff(note); // Send Note Off
+        setActiveNotes(prevSet => {
+          const next = new Set(prevSet);
+          next.delete(note);
+          return next;
+        });
+      }
+    });
+
+    currentTouched.forEach(note => {
+      if (!prev.has(note)) {
+        onNoteOn(note); // Send Note On
+        setActiveNotes(prevSet => {
+          const next = new Set(prevSet);
+          next.add(note);
+          return next;
+        });
+      }
+    });
+
+    touchedNotesRef.current = currentTouched;
+  }, [onNoteOn, onNoteOff]);
+
+  // Attach non-passive listeners for touch
+  useEffect(() => {
+    const el = keyboardRef.current;
+    if (!el) return;
+
+    const opts = { passive: false };
+    el.addEventListener('touchstart', handleTouch, opts);
+    el.addEventListener('touchmove', handleTouch, opts);
+    el.addEventListener('touchend', handleTouch, opts);
+    el.addEventListener('touchcancel', handleTouch, opts);
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouch);
+      el.removeEventListener('touchmove', handleTouch);
+      el.removeEventListener('touchend', handleTouch);
+      el.removeEventListener('touchcancel', handleTouch);
+    };
+  }, [handleTouch]);
+
+  // Pointer Event Handlers for Mouse (Touch is handled above)
   const onKeyPointerDown = (e: React.PointerEvent, n: number) => {
+    if (e.pointerType === 'touch') return; // Ignore touch pointers here, handled by handleTouch
     e.preventDefault();
     handleNoteOn(n);
   };
 
   const onKeyPointerEnter = (e: React.PointerEvent, n: number) => {
+    if (e.pointerType === 'touch') return;
     e.preventDefault();
-    // Play note if mouse button is held (buttons === 1) or if it's a touch input
-    if (e.buttons === 1 || e.pointerType === 'touch') {
+    if (e.buttons === 1) {
       handleNoteOn(n);
     }
   };
 
   const onKeyPointerLeave = (e: React.PointerEvent, n: number) => {
+    if (e.pointerType === 'touch') return;
     e.preventDefault();
     handleNoteOff(n);
   };
 
   const onKeyPointerUp = (e: React.PointerEvent, n: number) => {
+    if (e.pointerType === 'touch') return;
     e.preventDefault();
     handleNoteOff(n);
   };
@@ -122,15 +197,18 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
 
       {/* Keyboard Container with touch-action: none to prevent scrolling */}
       <div
+        ref={keyboardRef}
         className={`relative w-full flex items-stretch overflow-hidden transition-[height,opacity] duration-300 ${isExpanded ? 'h-32 md:h-48 lg:h-36 opacity-100' : 'h-0 opacity-0'}`}
         style={{ touchAction: 'none' }}
       >
         {keys.map((n) => {
           if (isBlackKey(n)) return null;
-          const active = activeNotes.has(n + (octave * 12));
+          const finalNote = n + (octave * 12);
+          const active = activeNotes.has(finalNote);
           return (
             <div
               key={n}
+              data-note={finalNote}
               className={`flex-grow border-r border-black/10 relative cursor-pointer ${active ? 'bg-dx7-teal' : 'bg-white hover:bg-gray-100'}`}
               onPointerDown={(e) => onKeyPointerDown(e, n)}
               onPointerEnter={(e) => onKeyPointerEnter(e, n)}
@@ -145,10 +223,12 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
         <div className="absolute inset-0 pointer-events-none flex items-stretch">
           {keys.map((n) => {
             if (!isBlackKey(n)) return <div key={n} className="flex-grow" />;
-            const active = activeNotes.has(n + (octave * 12));
+            const finalNote = n + (octave * 12);
+            const active = activeNotes.has(finalNote);
             return (
               <div key={n} className="relative z-10" style={{ width: '0%', flexBasis: '0%' }}>
                 <div
+                  data-note={finalNote}
                   className={`absolute top-0 -left-[14px] md:-left-[18px] w-[28px] md:w-[36px] h-[60%] border border-black rounded-b shadow-lg pointer-events-auto transition-all ${active ? 'bg-dx7-teal' : 'bg-gradient-to-b from-[#111] to-[#333]'}`}
                   onPointerDown={(e) => { e.stopPropagation(); onKeyPointerDown(e, n); }}
                   onPointerEnter={(e) => { e.stopPropagation(); onKeyPointerEnter(e, n); }}

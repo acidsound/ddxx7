@@ -279,7 +279,8 @@ class Voice {
         this.alg = algorithmData;
         this.velocity = velocity; // 0 to 1
         // Pitch correction: +24 semitones to compensate for observed 2-octave drop
-        this.baseFreq = 440 * Math.pow(2, (note - 69 + (patch.transpose - 24) + 24) / 12);
+        const transpose = (typeof patch.transpose === 'number') ? patch.transpose : 24;
+        this.baseFreq = 440 * Math.pow(2, (note - 69 + (transpose - 24) + 24) / 12);
 
         // Calculate Final Operator Volumes using the precise OUTPUT_LEVEL_TABLE
         this.opVolumes = new Float32Array(6);

@@ -7,7 +7,7 @@ export class DX7Engine {
   private patchQueue: Patch | null = null;
 
   constructor(patch: Patch) {
-    this.context = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 44100 });
+    this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
     this.patchQueue = patch;
     this.init();
   }

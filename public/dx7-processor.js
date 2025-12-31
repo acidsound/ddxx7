@@ -278,9 +278,9 @@ class Voice {
         this.lfo = lfo;
         this.alg = algorithmData;
         this.velocity = velocity; // 0 to 1
-        // Pitch correction: +24 semitones to compensate for observed 2-octave drop
+        // Pitch Check: Reverting +24 boost as user reports sound is 2 octaves too high
         const transpose = (typeof patch.transpose === 'number') ? patch.transpose : 24;
-        this.baseFreq = 440 * Math.pow(2, (note - 69 + (transpose - 24) + 24) / 12);
+        this.baseFreq = 440 * Math.pow(2, (note - 69 + (transpose - 24)) / 12);
 
         // Calculate Final Operator Volumes using the precise OUTPUT_LEVEL_TABLE
         this.opVolumes = new Float32Array(6);
@@ -441,6 +441,7 @@ class DX7Processor extends AudioWorkletProcessor {
         this.lfo = null;
         this.algorithms = null; // Received via message
         this.counter = 0; // For metering timing
+        this.heldNotes = []; // Stack for Mono mode note priority
 
         this.port.onmessage = e => {
             const { type, data, algorithms } = e.data;
@@ -450,19 +451,53 @@ class DX7Processor extends AudioWorkletProcessor {
             if (type === 'patch') {
                 this.patch = data;
                 this.lfo = new LFO(this.patch);
+                this.heldNotes = [];
             }
             if (type === 'noteOn' && this.patch && this.algorithms) {
-                if (this.voices.length >= 16) this.voices.shift();
-                if (this.patch.lfoSync) this.lfo?.sync();
                 const algData = this.algorithms[this.patch.algorithm - 1];
                 if (algData) {
-                    this.voices.push(new Voice(data.note, this.patch, data.velocity, this.lfo, algData));
+                    if (this.patch.mono) {
+                        // Mono Mode: Note Stack Logic (Last Note Priority with Retrigger)
+                        this.heldNotes = this.heldNotes.filter(n => n.note !== data.note);
+                        this.heldNotes.push({ note: data.note, velocity: data.velocity });
+
+                        this.voices = []; // Retrigger hard
+                        this.voices.push(new Voice(data.note, this.patch, data.velocity, this.lfo, algData));
+                    } else {
+                        // Poly Mode
+                        if (this.voices.length >= 16) this.voices.shift();
+                        if (this.patch.lfoSync) this.lfo?.sync();
+                        this.voices.push(new Voice(data.note, this.patch, data.velocity, this.lfo, algData));
+                    }
                 }
             }
             if (type === 'noteOff') {
-                this.voices.forEach(v => { if (v.note === data.note) v.noteOff(this.sustain); });
+                if (this.patch && this.patch.mono) {
+                    // Mono Mode: Remove from stack & Retrigger previous
+                    const prevTop = this.heldNotes.length > 0 ? this.heldNotes[this.heldNotes.length - 1] : null;
+                    this.heldNotes = this.heldNotes.filter(n => n.note !== data.note);
+                    const newTop = this.heldNotes.length > 0 ? this.heldNotes[this.heldNotes.length - 1] : null;
+
+                    if (prevTop && prevTop.note === data.note) {
+                        // We released the currently playing note
+                        if (newTop) {
+                            // Retrigger previous note
+                            this.voices = [];
+                            const algData = this.algorithms[this.patch.algorithm - 1];
+                            if (algData) {
+                                this.voices.push(new Voice(newTop.note, this.patch, newTop.velocity, this.lfo, algData));
+                            }
+                        } else {
+                            // No notes left, release current voice
+                            this.voices.forEach(v => v.noteOff(this.sustain));
+                        }
+                    }
+                } else {
+                    // Poly Mode
+                    this.voices.forEach(v => { if (v.note === data.note) v.noteOff(this.sustain); });
+                }
             }
-            if (type === 'panic') { this.voices = []; this.sustain = false; }
+            if (type === 'panic') { this.voices = []; this.heldNotes = []; this.sustain = false; }
             if (type === 'pitchBend') this.pitchBend = data;
             if (type === 'modWheel') this.modWheel = data;
             if (type === 'aftertouch') this.aftertouch = data;

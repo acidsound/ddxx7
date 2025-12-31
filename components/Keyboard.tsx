@@ -29,7 +29,7 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
   }, []);
 
   const handleNoteOn = useCallback((note: number) => {
-    const finalNote = note + (octave * 12);
+    const finalNote = note + ((octave + 2) * 12);
     if (activeNotesRef.current.has(finalNote)) return;
     activeNotesRef.current.add(finalNote);
     setActiveNotes(new Set(activeNotesRef.current));
@@ -37,7 +37,7 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
   }, [onNoteOn, octave]);
 
   const handleNoteOff = useCallback((note: number) => {
-    const finalNote = note + (octave * 12);
+    const finalNote = note + ((octave + 2) * 12);
     if (!activeNotesRef.current.has(finalNote)) return;
     activeNotesRef.current.delete(finalNote);
     setActiveNotes(new Set(activeNotesRef.current));
@@ -203,7 +203,7 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
       >
         {keys.map((n) => {
           if (isBlackKey(n)) return null;
-          const finalNote = n + (octave * 12);
+          const finalNote = n + ((octave + 2) * 12);
           const active = activeNotes.has(finalNote);
           return (
             <div
@@ -223,7 +223,7 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
         <div className="absolute inset-0 pointer-events-none flex items-stretch">
           {keys.map((n) => {
             if (!isBlackKey(n)) return <div key={n} className="flex-grow" />;
-            const finalNote = n + (octave * 12);
+            const finalNote = n + ((octave + 2) * 12);
             const active = activeNotes.has(finalNote);
             return (
               <div key={n} className="relative z-10" style={{ width: '0%', flexBasis: '0%' }}>

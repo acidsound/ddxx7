@@ -237,7 +237,9 @@ const App: React.FC = () => {
           <div className="w-full flex-grow flex flex-col lg:flex-row lg:pb-[209px] lg:overflow-hidden bg-[#0a0a0a]">
             {/* Left Column: Global Settings (Voice, Algorithm, Tone, Pitch Env) */}
             <div className="w-full lg:w-[55%] flex flex-col lg:overflow-y-auto custom-scrollbar lg:border-b border-white/10">
-              <div className="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center lg:sticky lg:top-0 lg:z-20"><h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.4em]">Patch info</h4></div>
+              <div className="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center lg:sticky lg:top-0 lg:z-20">
+                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.4em]">Patch info</h4>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2 lg:gap-0">
                 {/* Column 1: Voice & Algorithm */}
                 <div className="flex flex-col bg-[#111]/40 p-2 lg:p-2 border-r border-b border-white/5">
@@ -259,13 +261,14 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="flex flex-col gap-1.5 mt-2 lg:mt-0.5">
-                    <div className="h-[260px] bg-black/20 rounded-sm p-0.5">
-                      <AlgorithmMatrix algorithmId={patch.algorithm} />
+                    {/* Algorithm Graph Area */}
+                    <div className="h-[260px] lg:h-[220px] bg-black/20 rounded-sm p-0.5 flex items-stretch">
+                      <AlgorithmMatrix algorithmId={patch.algorithm} levels={opLevels} />
                     </div>
-                    <div className="bg-black/40 p-2 lg:p-1 rounded-sm border border-white/5 flex justify-around items-center shadow-lg">
-                      <ControlKnob label="Alg" min={1} max={32} value={patch.algorithm} onChange={v => updatePatch({ algorithm: v })} size={28} />
-                      <ControlKnob label="Fback" min={0} max={7} value={patch.feedback} onChange={v => updatePatch({ feedback: v })} size={28} />
-                    </div>
+                  </div>
+                  <div className="bg-black/40 p-2 lg:p-1 rounded-sm border border-white/5 flex justify-around items-center shadow-lg">
+                    <ControlKnob label="Alg" min={1} max={32} value={patch.algorithm} onChange={v => updatePatch({ algorithm: v })} size={28} />
+                    <ControlKnob label="Fback" min={0} max={7} value={patch.feedback} onChange={v => updatePatch({ feedback: v })} size={28} />
                   </div>
                 </div>
 
@@ -315,9 +318,7 @@ const App: React.FC = () => {
       </main>
 
       {/* MIDI Configuration Panel */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 bg-black border-t border-dx7-teal/30 z-[250] transition-all duration-300 ease-in-out overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.9)] ${isMidiPanelOpen ? 'h-[176px] md:h-[232px] opacity-100' : 'h-0 opacity-0'}`}
-      >
+      <div className={`fixed bottom-0 left-0 right-0 bg-black border-t border-dx7-teal/30 z-[250] transition-all duration-300 ease-in-out overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.9)] ${isMidiPanelOpen ? 'h-[176px] md:h-[232px] opacity-100' : 'h-0 opacity-0'}`}>
         <div className="p-4 h-full flex flex-col max-w-4xl mx-auto gap-3">
           <div className="flex justify-between items-center">
             <h3 className="text-dx7-teal font-orbitron font-bold text-[10px] uppercase tracking-[0.4em]">MIDI CONFIGURATION</h3>

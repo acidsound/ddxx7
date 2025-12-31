@@ -3,6 +3,7 @@ import { ALGORITHMS } from '../services/algorithms';
 
 interface AlgorithmMatrixProps {
   algorithmId: number; // 1-32
+  levels?: Float32Array;
 }
 
 interface NodePosition {
@@ -17,62 +18,50 @@ interface Edge {
   isFeedback: boolean; // Explicit feedback loop
 }
 
-export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
+export default function AlgorithmMatrix({ algorithmId, levels }: AlgorithmMatrixProps) {
   const alg = ALGORITHMS[algorithmId - 1] || ALGORITHMS[0];
 
+  // ... (useMemo for layout remains same) ...
   const { edges, positions, carriers } = useMemo(() => {
+    // ... (same layout logic) ...
+    // Layout logic is quite long, assuming it's preserved by the tool if not touched.
+    // However, to be safe with 'replace_file_content', I need to check where to cut.
+    // Since I cannot skip lines in replace_file_content easily without context, 
+    // I am targeting the whole file content replacement strategy or just the Return block.
+    // But let's try to target specific blocks if possible.
+    // The previous prompt provided the full file content. I will replace the component body.
+    // Wait, the replaced content must match start/end lines.
+    // I will replace the whole component function to be safe and clean.
+
+    // Actually, I'll keep the layout logic as is and focus on the return statement mostly.
+
     const numOps = 6;
     const pos: Record<number, NodePosition> = {};
     const placed = new Set<number>();
     const treeEdges = new Set<string>(); // "from-to" strings
 
     // 1. Identify Carriers (Roots)
-    // Sort to ensure consistent left-to-right order (e.g. 1, 3 for Alg 9)
     const carrierList = [...alg.outputMix].sort((a, b) => a - b);
 
     // 2. Recursive Layout Function
-    // Returns the maximum X coordinate used by the subtree rooted at 'opIndex'
     function layoutNode(opIndex: number, startX: number, rank: number, path: Set<number>): number {
-      if (placed.has(opIndex)) {
-        // If node is already placed, we don't move it. 
-        // Just return the current X to indicate no *new* width was consumed relative to startX.
-        // However, if we are trying to place a shared node, it effectively ends this branch's width expansion.
-        return startX - 1;
-      }
-
+      if (placed.has(opIndex)) return startX - 1;
       pos[opIndex] = { x: startX, y: rank };
       placed.add(opIndex);
-
-      // Get Modulators (Children in the tree)
-      // Filter out nodes that are already in the current recursion stack (cycles)
       const modulators = alg.modulationMatrix[opIndex];
       const validChildren = modulators.filter(m => !path.has(m));
-
-      if (validChildren.length === 0) {
-        return startX;
-      }
+      if (validChildren.length === 0) return startX;
 
       let currentChildX = startX;
       let maxSubTreeX = startX;
 
-      // "Fill from directly above to the right"
-      // The first child is placed directly above (same X).
-      // Subsequent children are placed to the right of the previous child's subtree.
       validChildren.forEach((mod) => {
-        // Record this as a structural tree edge
         treeEdges.add(`${mod}-${opIndex}`);
-
         const newPath = new Set(path).add(opIndex);
         const childMaxX = layoutNode(mod, currentChildX, rank + 1, newPath);
-
         if (childMaxX > maxSubTreeX) maxSubTreeX = childMaxX;
-
-        // Next sibling starts after the current child's subtree
         currentChildX = childMaxX + 1;
       });
-
-      // The width of this node is determined by its widest child subtree, 
-      // but must be at least its own position (startX).
       return Math.max(startX, maxSubTreeX);
     }
 
@@ -80,7 +69,6 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
     let nextTreeStartX = 0;
     carrierList.forEach(c => {
       const treeWidth = layoutNode(c, nextTreeStartX, 0, new Set());
-      // Start next tree after this tree's max width + 1 column gap
       nextTreeStartX = treeWidth + 1;
     });
 
@@ -90,11 +78,7 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
       mods.forEach(mod => {
         const isSelf = mod === carrier;
         const isTree = treeEdges.has(`${mod}-${carrier}`);
-
-        // If it's not a tree edge, it's a feedback or cross-modulation edge
-        // Usually visual feedback loops are those not in the main tree structure
         let isFeedback = isSelf || !isTree;
-
         rawEdges.push({ from: mod, to: carrier, isTree, isFeedback });
       });
     });
@@ -124,7 +108,6 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
   const totalContentHeight = (maxRank) * (boxH + gapY) + boxH;
 
   const offsetX = (svgW - totalContentWidth) / 2;
-  // Position the bottom-most nodes (rank 0) so they aren't cut off
   const startYBase = svgH - ((svgH - totalContentHeight) / 2) - 20;
   const busY = startYBase + boxH + 10;
 
@@ -138,13 +121,37 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
     };
   };
 
+  // Identify feedback source operators (for shaking)
+  const feedbackSources = new Set<number>();
+  edges.forEach(e => {
+    if (e.isFeedback && e.from === e.to) feedbackSources.add(e.from); // simple self-feedback
+    // Complex feedback logic: For now, strict self-feedback is the primary candidate for "shaking"
+    // But any operator in a feedback loop could shake.
+    // Let's stick to self-feedback or loop sources.
+  });
+
   return (
-    <div className="bg-[#0b0b0b] p-3 lg:p-2 rounded border border-white/5 flex flex-col items-center justify-center h-full min-h-[140px] shadow-inner relative group">
+    <div className="bg-[#0b0b0b] p-3 lg:p-2 rounded border border-white/5 flex flex-col items-center justify-center h-full min-h-[140px] shadow-inner relative group overflow-hidden">
+      <style>{`
+        @keyframes shake {
+          0% { transform: translate(1px, 1px) rotate(0deg); }
+          10% { transform: translate(-1px, -2px) rotate(-1deg); }
+          20% { transform: translate(-3px, 0px) rotate(1deg); }
+          30% { transform: translate(3px, 2px) rotate(0deg); }
+          40% { transform: translate(1px, -1px) rotate(1deg); }
+          50% { transform: translate(-1px, 2px) rotate(-1deg); }
+          60% { transform: translate(-3px, 1px) rotate(0deg); }
+          70% { transform: translate(3px, 1px) rotate(-1deg); }
+          80% { transform: translate(-1px, -1px) rotate(1deg); }
+          90% { transform: translate(1px, 2px) rotate(0deg); }
+          100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+      `}</style>
       <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] text-gray-700 font-bold uppercase tracking-[0.4em] opacity-50 group-hover:opacity-100 transition-opacity">
         ALGORITHM {algorithmId}
       </div>
 
-      <svg viewBox={`0 0 ${svgW} ${svgH}`} className="h-full overflow-visible" preserveAspectRatio="xMidYMid meet">
+      <svg viewBox={`0 0 ${svgW} ${svgH}`} className="h-full w-full overflow-visible" preserveAspectRatio="xMidYMid meet">
         {/* Render Connections */}
         {edges.map((edge, i) => {
           const p1 = getSvgPos(edge.from);
@@ -163,10 +170,8 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
                 </g>
               );
             } else {
-              // Complex feedback (side loop)
-              // Draw curve around the right side
+              // Complex feedback
               const sideX = Math.max(p1.x, p2.x) + boxW + 16;
-              // Adjust height to not overlap too much
               const topY = Math.min(p1.y, p2.y) - 4;
               return (
                 <g key={`fb-${i}`}>
@@ -218,19 +223,44 @@ export default function AlgorithmMatrix({ algorithmId }: AlgorithmMatrixProps) {
 
         {/* Render Operators */}
         {Object.entries(positions).map(([opIdx, pos]) => {
-          const p = getSvgPos(parseInt(opIdx));
+          const id = parseInt(opIdx);
+          const p = getSvgPos(id);
+          const level = levels ? levels[id] || 0 : 0;
+          const isActive = level > 0.05;
+          const isFeedback = feedbackSources.has(id);
+          const shouldShake = isFeedback && level > 0.1; // Shake threshold
+
           return (
-            <g key={opIdx}>
+            <g
+              key={opIdx}
+              style={{
+                transformOrigin: `${p.x + boxW / 2}px ${p.y + boxH / 2}px`,
+                animation: shouldShake ? `shake ${Math.max(0.1, 1 - level)}s infinite` : 'none'
+              }}
+            >
               <rect
                 x={p.x} y={p.y} width={boxW} height={boxH}
-                fill="#151515" stroke="#444" strokeWidth="3" rx="4"
+                fill={isActive ? '#041818' : '#151515'}
+                stroke={isActive ? '#00d4c1' : '#444'}
+                strokeWidth={isActive ? 4 : 3}
+                rx="4"
+                className={`transition-colors duration-100 ${isActive ? 'drop-shadow-[0_0_10px_rgba(0,212,193,0.4)]' : ''}`}
+              />
+              <rect
+                x={p.x} y={p.y} width={boxW} height={boxH}
+                fill="#00d4c1" rx="4"
+                style={{ opacity: level * 0.4 }}
+                className="transition-opacity duration-75"
               />
               <text
                 x={p.x + boxW / 2} y={p.y + boxH / 2 + 8}
-                fontSize="28" fill="#00d4c1" textAnchor="middle" fontWeight="bold"
+                fontSize="28"
+                fill={isActive ? '#ffffff' : '#00d4c1'}
+                textAnchor="middle" fontWeight="bold"
                 fontFamily="Orbitron" className="select-none pointer-events-none"
+                style={{ textShadow: isActive ? '0 0 10px #00d4c1' : 'none' }}
               >
-                {parseInt(opIdx) + 1}
+                {id + 1}
               </text>
             </g>
           );

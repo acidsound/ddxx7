@@ -14,7 +14,13 @@ export class DX7Engine {
 
   private async init() {
     try {
-      await this.context.audioWorklet.addModule('/dx7-processor.js');
+      if (!this.context.audioWorklet) {
+        const msg = "AudioWorklet not supported. Check HTTPS/Secure Context.";
+        alert(msg); throw new Error(msg);
+      }
+
+      // Use relative path for better compatibility
+      await this.context.audioWorklet.addModule('dx7-processor.js');
 
       this.node = new AudioWorkletNode(this.context, 'dx7-processor', {
         outputChannelCount: [2],
@@ -31,8 +37,9 @@ export class DX7Engine {
         this.node.port.postMessage({ type: 'patch', data: this.patchQueue });
         this.patchQueue = null;
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("AudioWorklet Load Error", e);
+      alert("Audio Init Error: " + (e.message || e));
     }
   }
 

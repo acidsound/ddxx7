@@ -8,6 +8,7 @@ interface OperatorPanelProps {
   index: number;
   params: OperatorParams;
   level?: number;
+  envState?: number;
   onChange: (newParams: OperatorParams) => void;
 }
 
@@ -40,7 +41,7 @@ const CurveIcon: React.FC<{ type: number; mirrored?: boolean }> = ({ type, mirro
   );
 };
 
-const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, onChange }) => {
+const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, envState, onChange }) => {
   const update = (field: keyof OperatorParams, value: any) => {
     onChange({ ...params, [field]: value });
   };
@@ -55,27 +56,56 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, onC
     const width = 160;
     const height = 90;
     const getY = (l: number) => (1 - l / 99) * height;
-    const getTime = (r: number) => Math.max(2, (100 - r) * 0.4);
 
-    const t1 = getTime(params.rates[0]);
-    const t2 = getTime(params.rates[1]);
-    const t3 = getTime(params.rates[2]);
-    const t4 = getTime(params.rates[3]);
+    // Use a staged weighting to ensure visibility of all phases regardless of rate
+    // Each stage gets at least 15% of width, remaining distributed exponentially
+    const getWeights = (rates: number[]) => {
+      const BASE_W = 20; // Min pixels per stage
+      const rawWeights = rates.map(r => Math.pow(1.045, 100 - r));
+      const totalRaw = rawWeights.reduce((a, b) => a + b, 0);
+      const remainingW = width - (BASE_W * 4);
+      return rawWeights.map(rw => BASE_W + (rw / totalRaw) * remainingW);
+    };
 
+    const ws = getWeights(params.rates);
+
+    // Fixed Note 60 boost for visualization (representative view)
+    const rksBoost = Math.floor(params.keyScaleRate * (60 - 21) / 8);
+    const getEffectiveT = (r: number, w: number) => {
+      const effectiveR = Math.min(99, r + rksBoost);
+      // For high rates, make the segment visually shorter to look like "\"
+      if (effectiveR > 90) return 5;
+      return w;
+    };
+
+    const t1 = getEffectiveT(params.rates[0], ws[0]);
+    const t2 = ws[1];
+    const t3 = ws[2];
+    const t4 = ws[3];
+
+    // Redistribution to keep width fixed
     const totalT = t1 + t2 + t3 + t4;
-    const scaleX = width / totalT;
+    const sx = width / totalT;
 
     const p0 = { x: 0, y: getY(params.levels[3]) };
-    const p1 = { x: t1 * scaleX, y: getY(params.levels[0]) };
-    const p2 = { x: p1.x + t2 * scaleX, y: getY(params.levels[1]) };
-    const p3 = { x: p2.x + t3 * scaleX, y: getY(params.levels[2]) };
+    const p1 = { x: t1 * sx, y: getY(params.levels[0]) };
+    const p2 = { x: p1.x + t2 * sx, y: getY(params.levels[1]) };
+    const p3 = { x: p2.x + t3 * sx, y: getY(params.levels[2]) };
     const p4 = { x: width, y: getY(params.levels[3]) };
 
-    const lineD = `M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y}`;
+    // Draw with Curves for better sonic representation
+    // Attack (p0->p1) is typically convex/linear levels
+    // Decays are exponential (Concave in amplitude space)
+    const lineD = `M ${p0.x} ${p0.y} 
+                  L ${p1.x} ${p1.y} 
+                  L ${p2.x} ${p2.y} 
+                  Q ${(p2.x + p3.x) / 2} ${p2.y + (p3.y - p2.y) * 0.15} ${p3.x} ${p3.y} 
+                  Q ${(p3.x + p4.x) / 2} ${p3.y + (p4.y - p3.y) * 0.15} ${p4.x} ${p4.y}`;
+
     const fillD = `${lineD} L ${width} ${height} L 0 ${height} Z`;
 
-    return { lineD, fillD };
-  }, [params.rates, params.levels]);
+    return { lineD, fillD, points: [p0, p1, p2, p3, p4] };
+  }, [params.rates, params.levels, params.keyScaleRate]);
 
   const isActive = params.volume > 0;
 
@@ -88,7 +118,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, onC
 
       {/* Sidebar Toggle Section */}
       <div className="flex flex-col items-center justify-center min-w-[80px] w-[80px] lg:min-w-[40px] lg:w-[40px] h-full border-r border-white/5 bg-black/40 shrink-0 z-10 relative overflow-hidden">
-        
+
         <button
           onClick={toggleOperator}
           className={`relative z-10 w-10 h-10 lg:w-7 lg:h-7 rounded-sm flex items-center justify-center border transition-all font-orbitron font-bold text-sm lg:text-[10px] active:scale-90 select-none ${isActive ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_15px_rgba(0,212,193,0.3)]' : 'bg-[#080808] text-gray-700 border-[#1a1a1a]'}`}
@@ -98,10 +128,10 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, onC
 
         {/* High Visibility Level Meter (Right Edge) */}
         <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-black/50">
-           <div 
-             className="absolute bottom-0 left-0 right-0 bg-dx7-teal shadow-[0_0_8px_#00d4c1] transition-all duration-75 ease-out" 
-             style={{ height: `${Math.min(100, (level || 0) * 150)}%` }} // Increased sensitivity (1.5x)
-           />
+          <div
+            className="absolute bottom-0 left-0 right-0 bg-dx7-teal shadow-[0_0_8px_#00d4c1] transition-all duration-75 ease-out"
+            style={{ height: `${Math.min(100, (level || 0) * 150)}%` }} // Increased sensitivity (1.5x)
+          />
         </div>
       </div>
 
@@ -160,11 +190,42 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, onC
 
           {/* Envelope Section */}
           <div className="flex items-center gap-2 pl-2 border-l border-white/5 shrink-0 h-[72px]">
-            <div className="w-[100px] bg-black rounded-sm border border-black/40 shadow-inner p-0.5 h-full flex items-center justify-center relative">
-              <svg viewBox="0 0 160 90" preserveAspectRatio="none" className="w-full h-full opacity-60">
-                <path d={graphData.fillD} fill="#00d4c1" fillOpacity="0.15" />
-                <path d={graphData.lineD} fill="none" stroke="#00d4c1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <div className="w-[100px] bg-black rounded-sm border border-white/5 shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] p-0.5 h-full flex items-center justify-center relative overflow-hidden">
+              <svg viewBox="0 0 160 90" preserveAspectRatio="none" className="w-full h-full">
+                {/* Base Envelope (Lower opacity) */}
+                <path d={graphData.fillD} fill="#00d4c1" fillOpacity="0.05" />
+                <path d={graphData.lineD} fill="none" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="1" />
+
+                {/* Active Level Highlighting (Neon Cyan) */}
+                {envState !== undefined && envState < 4 && (
+                  <>
+                    <line
+                      x1={graphData.points[envState].x}
+                      y1={graphData.points[envState].y}
+                      x2={graphData.points[envState + 1].x}
+                      y2={graphData.points[envState + 1].y}
+                      stroke="#00ffff"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      className="drop-shadow-[0_0_5px_#00ffff]"
+                    />
+                    <circle
+                      cx={graphData.points[envState + 1].x}
+                      cy={graphData.points[envState + 1].y}
+                      r="3.5"
+                      fill="#00ffff"
+                      className="shadow-[0_0_12px_#00ffff]"
+                    />
+                  </>
+                )}
               </svg>
+
+              {/* Vibrant Stage Indicator Badge */}
+              {envState !== undefined && envState < 4 && (
+                <div className="absolute top-1 left-1.5 px-1.5 py-0.5 bg-[#00ffff] text-black text-[7px] font-black rounded-sm shadow-[0_0_10px_rgba(0,255,255,0.5)] tracking-tighter uppercase">
+                  S{envState + 1}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col items-center gap-1">

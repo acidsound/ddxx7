@@ -183,6 +183,7 @@ class Envelope {
         // Note: Reference envelope-dx7.js does NOT apply keyboard rate scaling
         // It uses rate_scaling = 0 always. Keeping note for potential future use.
         this.note = note;
+        this.keyScaleRate = keyScaleRate;
 
         this.advance(0);
     }
@@ -195,8 +196,14 @@ class Envelope {
             this.targetlevel = Math.max(0, (ENV_LEVEL_TABLE[newlevel] << 5) - 224);
             this.rising = (this.targetlevel - this.level) > 0;
 
-            // Rate calculation - reference uses rate_scaling = 0
-            const qr = Math.min(63, (this.rates[this.state] * 41) >> 6);
+            // Apply Keyboard Rate Scaling (RS)
+            // DX7: Rate increases as you play higher notes based on keyScaleRate
+            const noteOffset = Math.max(0, this.note - 21); // A-1 corresponds to 0
+            const rBoost = Math.floor(this.keyScaleRate * noteOffset / 8);
+            const effectiveRate = Math.min(99, this.rates[this.state] + rBoost);
+
+            // Rate calculation using effectiveRate
+            const qr = Math.min(63, (effectiveRate * 41) >> 6);
             // Adjusted divisor: 8192 to significantly slow down decay (4x reference 2048)
             const divisor = 8192 * (SAMPLE_RATE / 44100);
             this.decayIncrement = Math.pow(2, qr / 4) / divisor;
@@ -452,6 +459,7 @@ class DX7Processor extends AudioWorkletProcessor {
                 this.patch = data;
                 this.lfo = new LFO(this.patch);
                 this.heldNotes = [];
+                this.voices = []; // Clear active voices on patch change
             }
             if (type === 'noteOn' && this.patch && this.algorithms) {
                 const algData = this.algorithms[this.patch.algorithm - 1];
@@ -522,7 +530,8 @@ class DX7Processor extends AudioWorkletProcessor {
             console.log('DX7 Processor running at', SAMPLE_RATE, 'Hz');
         }
 
-        const ctrlMod = Math.min(1.27, this.modWheel + this.aftertouch);
+        const atEffect = this.patch.aftertouchEnabled ? this.aftertouch : 0;
+        const ctrlMod = Math.min(1.27, this.modWheel + atEffect);
 
         for (let i = 0; i < outL.length; i++) {
             let l = 0, r = 0;
@@ -537,17 +546,20 @@ class DX7Processor extends AudioWorkletProcessor {
             outL[i] = l; outR[i] = r;
         }
 
-        // Metering: Send operator levels every ~46ms (2048 samples)
+        // Metering: Send operator levels and envelope states every ~46ms (2048 samples)
         if (this.counter % 2048 === 0) {
             const levels = new Float32Array(6);
-            // Find max level for each operator across all active voices
-            for (const v of this.voices) {
+            const states = new Int8Array(6).fill(4); // Default to finished/off
+
+            if (this.voices.length > 0) {
+                // Use the latest voice for visualization
+                const latestVoice = this.voices[this.voices.length - 1];
                 for (let op = 0; op < 6; op++) {
-                    const val = Math.abs(v.opOutputs[op]);
-                    if (val > levels[op]) levels[op] = val;
+                    levels[op] = Math.abs(latestVoice.opOutputs[op]);
+                    states[op] = latestVoice.envs[op].state;
                 }
             }
-            this.port.postMessage({ type: 'opLevels', data: levels });
+            this.port.postMessage({ type: 'opLevels', data: levels, envStates: states });
         }
         this.counter += outL.length;
 

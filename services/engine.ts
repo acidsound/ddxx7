@@ -30,7 +30,7 @@ export class DX7Engine {
 
       this.node.port.onmessage = (e) => {
         if (e.data.type === 'opLevels' && this.opLevelsHandler) {
-          this.opLevelsHandler(e.data.data);
+          this.opLevelsHandler(e.data.data, e.data.envStates);
         }
       };
 
@@ -55,14 +55,14 @@ export class DX7Engine {
   noteOff(note: number) { this.node?.port.postMessage({ type: 'noteOff', data: { note } }); }
   panic() { this.node?.port.postMessage({ type: 'panic' }); }
 
-  private opLevelsHandler: ((levels: Float32Array) => void) | null = null;
+  private opLevelsHandler: ((levels: Float32Array, envStates?: Int8Array) => void) | null = null;
 
   setPitchBend(val: number) { this.node?.port.postMessage({ type: 'pitchBend', data: val }); }
   setModWheel(val: number) { this.node?.port.postMessage({ type: 'modWheel', data: val }); }
   setAftertouch(val: number) { this.node?.port.postMessage({ type: 'aftertouch', data: val }); }
   setSustain(val: boolean) { this.node?.port.postMessage({ type: 'sustain', data: val }); }
 
-  public onOpLevels(callback: (levels: Float32Array) => void) {
+  public onOpLevels(callback: (levels: Float32Array, envStates?: Int8Array) => void) {
     this.opLevelsHandler = callback;
   }
 }

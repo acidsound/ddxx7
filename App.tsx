@@ -10,6 +10,30 @@ import AlgorithmMatrix from './components/AlgorithmMatrix';
 import PitchEnvelopePanel from './components/PitchEnvelopePanel';
 import ControlKnob from './components/ControlKnob';
 
+const FileImporter = React.memo(({ onFilesSelected, inputRef }: { onFilesSelected: (patches: Patch[]) => void, inputRef: React.RefObject<HTMLInputElement> }) => {
+  return (
+    <input
+      type="file"
+      ref={inputRef}
+      onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) {
+          const r = new FileReader();
+          r.onload = (ev) => {
+            const patches = SysExHandler.parseFile(ev.target?.result as ArrayBuffer);
+            if (patches.length > 0) {
+              onFilesSelected(patches);
+            }
+          };
+          r.readAsArrayBuffer(f);
+        }
+      }}
+      accept=".syx"
+      className="hidden"
+    />
+  );
+});
+
 const App: React.FC = () => {
   const [patch, setPatch] = useState<Patch>(PRESETS[0]);
   const [library, setLibrary] = useState<Patch[]>(PRESETS);
@@ -17,8 +41,29 @@ const App: React.FC = () => {
   const [midiAccess, setMidiAccess] = useState<MIDIAccess | null>(null);
   const [inputs, setInputs] = useState<MidiDevice[]>([]);
   const [outputs, setOutputs] = useState<MidiDevice[]>([]);
-  const [selectedInputs, setSelectedInputs] = useState<Set<string>>(new Set());
-  const [selectedOutput, setSelectedOutput] = useState<string>('');
+  const [selectedInputs, setSelectedInputs] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('ddxx7_midi_inputs');
+    if (saved) {
+      try {
+        const ids = JSON.parse(saved);
+        if (Array.isArray(ids)) return new Set(ids);
+      } catch (e) { console.warn("Failed to parse MIDI inputs"); }
+    }
+    return new Set();
+  });
+
+  const [selectedOutput, setSelectedOutput] = useState<string>(() => {
+    return localStorage.getItem('ddxx7_midi_output') || '';
+  });
+
+  // MIDI Persistence Savers
+  useEffect(() => {
+    localStorage.setItem('ddxx7_midi_inputs', JSON.stringify(Array.from(selectedInputs)));
+  }, [selectedInputs]);
+
+  useEffect(() => {
+    localStorage.setItem('ddxx7_midi_output', selectedOutput);
+  }, [selectedOutput]);
   const [midiChannel, setMidiChannel] = useState(0);
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(false);
   const [activeViewVal, setActiveViewVal] = useState<'edit' | 'library'>('edit');
@@ -31,13 +76,13 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastSyncTimeRef = useRef<number>(0);
   const [opLevels, setOpLevels] = useState<Float32Array>(new Float32Array(6));
+  const [opStates, setOpStates] = useState<Int8Array>(new Int8Array(6).fill(4));
 
   useEffect(() => {
     engineRef.current = new DX7Engine(PRESETS[0]);
-    engineRef.current.onOpLevels((levels) => {
-      // requestAnimationFrame to throttle UI updates if needed, but react set state is already batched usually.
-      // However, 50ms updates are fine.
+    engineRef.current.onOpLevels((levels, states) => {
       setOpLevels(levels);
+      if (states) setOpStates(states);
     });
   }, []);
 
@@ -171,24 +216,19 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handlePatchSwitch, currentPatchIndex, library.length]);
 
+  const handleFilesSelected = useCallback((patches: Patch[]) => {
+    setLibrary(patches);
+    setPatch(patches[0]);
+    setCurrentPatchIndex(0);
+    engineRef.current?.updatePatch(patches[0]);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen bg-[#0a0a0a] text-gray-300 font-inter overflow-hidden relative">
-      <input type="file" ref={fileInputRef} onChange={(e) => {
-        const f = e.target.files?.[0];
-        if (f) {
-          const r = new FileReader();
-          r.onload = (ev) => {
-            const patches = SysExHandler.parseFile(ev.target?.result as ArrayBuffer);
-            if (patches.length > 0) {
-              setLibrary(patches);
-              setPatch(patches[0]);
-              setCurrentPatchIndex(0);
-              engineRef.current?.updatePatch(patches[0]);
-            }
-          };
-          r.readAsArrayBuffer(f);
-        }
-      }} accept=".syx" className="hidden" />
+      <FileImporter
+        inputRef={fileInputRef}
+        onFilesSelected={handleFilesSelected}
+      />
 
       {!isAudioUnlocked && (
         <div className="fixed inset-0 z-[300] bg-black/80 flex flex-col items-center justify-center p-6 text-center backdrop-blur-xl">
@@ -288,7 +328,7 @@ const App: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 {patch.operators.map((op, i) => (
-                  <OperatorPanel key={i + 1} index={i + 1} params={op} level={opLevels[i]} onChange={p => {
+                  <OperatorPanel key={i + 1} index={i + 1} params={op} level={opLevels[i]} envState={opStates[i]} onChange={p => {
                     const next = [...patch.operators]; next[i] = p; updatePatch({ operators: next });
                   }} />
                 ))}

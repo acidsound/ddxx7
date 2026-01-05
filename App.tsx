@@ -64,7 +64,7 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('ddxx7_midi_output', selectedOutput);
   }, [selectedOutput]);
-  const [midiChannel, setMidiChannel] = useState(0);
+
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(false);
   const [activeViewVal, setActiveViewVal] = useState<'edit' | 'library'>('edit');
   const [isMidiPanelOpen, setIsMidiPanelOpen] = useState(false);
@@ -105,7 +105,7 @@ const App: React.FC = () => {
     engineRef.current?.panic();
     if (midiAccess && selectedOutput) {
       const out = midiAccess.outputs.get(selectedOutput);
-      if (out) out.send([0xB0 | (midiChannel & 0x0F), 123, 0]);
+      if (out) out.send([0xB0, 123, 0]);
     }
   };
 
@@ -114,10 +114,10 @@ const App: React.FC = () => {
     const out = midiAccess.outputs.get(selectedOutput);
     if (out) {
       setIsSendingToHW(true);
-      out.send(SysExHandler.createSingleVoiceDump(p, midiChannel));
+      out.send(SysExHandler.createSingleVoiceDump(p));
       setTimeout(() => setIsSendingToHW(false), 120);
     }
-  }, [midiAccess, selectedOutput, midiChannel]);
+  }, [midiAccess, selectedOutput]);
 
   const updatePatch = useCallback((changes: Partial<Patch>) => {
     setPatch(prev => {
@@ -391,7 +391,7 @@ const App: React.FC = () => {
           <div className="flex gap-3 p-3 bg-white/5 border border-white/10 rounded items-center mt-auto">
             <button onClick={handlePanic} className="bg-red-950/40 text-red-500 border border-red-500/40 px-4 py-1.5 text-[9px] font-bold rounded uppercase tracking-widest hover:bg-red-900/60 transition-colors">PANIC</button>
             <div className="flex-grow"></div>
-            <button onClick={() => handleSendToHW(patch)} disabled={!selectedOutput} className={`px-5 py-1.5 bg-dx7-teal/20 text-dx7-teal border border-dx7-teal/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-dx7-teal/40'}`}>{isSendingToHW ? 'SENDING...' : 'SEND VOICES'}</button>
+            <button onClick={() => handleSendToHW(patch)} disabled={!selectedOutput} className={`px-5 py-1.5 bg-dx7-teal/20 text-dx7-teal border border-dx7-teal/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-dx7-teal/40'}`}>{isSendingToHW ? 'SENDING...' : 'SEND VOICE'}</button>
           </div>
         </div>
       </div>

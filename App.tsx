@@ -70,6 +70,7 @@ const App: React.FC = () => {
   const [isMidiPanelOpen, setIsMidiPanelOpen] = useState(false);
   const [manualVelocity, setManualVelocity] = useState<number>(100);
   const [isSendingToHW, setIsSendingToHW] = useState(false);
+  const [isReceivingFromHW, setIsReceivingFromHW] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
 
   const engineRef = useRef<DX7Engine | null>(null);
@@ -119,6 +120,18 @@ const App: React.FC = () => {
     }
   }, [midiAccess, selectedOutput]);
 
+  const handleReceiveFromHW = useCallback(() => {
+    if (!midiAccess || !selectedOutput) return;
+    const out = midiAccess.outputs.get(selectedOutput);
+    if (out) {
+      setIsReceivingFromHW(true);
+      // Send Voice Dump Request to DX7
+      out.send(SysExHandler.createVoiceDumpRequest());
+      // Reset the receiving state after a timeout (DX7 should respond within 500ms)
+      setTimeout(() => setIsReceivingFromHW(false), 1500);
+    }
+  }, [midiAccess, selectedOutput]);
+
   const updatePatch = useCallback((changes: Partial<Patch>) => {
     setPatch(prev => {
       const next = { ...prev, ...changes };
@@ -155,7 +168,10 @@ const App: React.FC = () => {
       const d = e.data;
       if (d[0] === 0xF0) {
         const patches = SysExHandler.parseFile(d.buffer);
-        if (patches.length > 0) { updatePatch(patches[0]); }
+        if (patches.length > 0) {
+          updatePatch(patches[0]);
+          setIsReceivingFromHW(false); // Reset receiving state on successful reception
+        }
         return;
       }
 
@@ -391,6 +407,7 @@ const App: React.FC = () => {
           <div className="flex gap-3 p-3 bg-white/5 border border-white/10 rounded items-center mt-auto">
             <button onClick={handlePanic} className="bg-red-950/40 text-red-500 border border-red-500/40 px-4 py-1.5 text-[9px] font-bold rounded uppercase tracking-widest hover:bg-red-900/60 transition-colors">PANIC</button>
             <div className="flex-grow"></div>
+            <button onClick={handleReceiveFromHW} disabled={!selectedOutput} className={`px-5 py-1.5 bg-amber-950/40 text-amber-400 border border-amber-500/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-amber-900/40'}`}>{isReceivingFromHW ? 'WAITING...' : 'RECEIVE'}</button>
             <button onClick={() => handleSendToHW(patch)} disabled={!selectedOutput} className={`px-5 py-1.5 bg-dx7-teal/20 text-dx7-teal border border-dx7-teal/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-dx7-teal/40'}`}>{isSendingToHW ? 'SENDING...' : 'SEND VOICE'}</button>
           </div>
         </div>

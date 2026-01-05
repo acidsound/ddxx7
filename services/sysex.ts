@@ -188,4 +188,46 @@ export class SysExHandler {
     msg[162] = 0xF7;
     return msg;
   }
+
+  /**
+   * Create Voice Dump Request message
+   * Sends this to DX7 to request the current voice (edit buffer)
+   * 
+   * Format: F0 43 2N 00 F7
+   * - F0: SysEx Start
+   * - 43: Yamaha Manufacturer ID
+   * - 2N: Voice Dump Request (N = device ID, 0-15)
+   * - 00: Parameter Group (0 = Voice)
+   * - F7: SysEx End
+   */
+  static createVoiceDumpRequest(deviceId: number = 0): Uint8Array {
+    return new Uint8Array([
+      0xF0,           // SysEx Start
+      0x43,           // Yamaha ID
+      0x20 | (deviceId & 0x0F),  // Voice Dump Request: 0x20 + device ID
+      0x00,           // Parameter Group: Voice
+      0xF7            // SysEx End
+    ]);
+  }
+
+  /**
+   * Create Bulk Dump Request message
+   * Sends this to DX7 to request all 32 voices from internal memory
+   * 
+   * Format: F0 43 2N 09 F7
+   * - F0: SysEx Start
+   * - 43: Yamaha Manufacturer ID
+   * - 2N: Dump Request (N = device ID, 0-15)
+   * - 09: Parameter Group (9 = 32 Voice Bulk)
+   * - F7: SysEx End
+   */
+  static createBulkDumpRequest(deviceId: number = 0): Uint8Array {
+    return new Uint8Array([
+      0xF0,           // SysEx Start
+      0x43,           // Yamaha ID
+      0x20 | (deviceId & 0x0F),  // Dump Request: 0x20 + device ID
+      0x09,           // Parameter Group: 32 Voice Bulk
+      0xF7            // SysEx End
+    ]);
+  }
 }

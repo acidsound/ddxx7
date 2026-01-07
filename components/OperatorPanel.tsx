@@ -93,14 +93,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
     const p3 = { x: p2.x + t3 * sx, y: getY(params.levels[2]) };
     const p4 = { x: width, y: getY(params.levels[3]) };
 
-    // Draw with Curves for better sonic representation
-    // Attack (p0->p1) is typically convex/linear levels
-    // Decays are exponential (Concave in amplitude space)
-    const lineD = `M ${p0.x} ${p0.y} 
-                  L ${p1.x} ${p1.y} 
-                  L ${p2.x} ${p2.y} 
-                  Q ${(p2.x + p3.x) / 2} ${p2.y + (p3.y - p2.y) * 0.15} ${p3.x} ${p3.y} 
-                  Q ${(p3.x + p4.x) / 2} ${p3.y + (p4.y - p3.y) * 0.15} ${p4.x} ${p4.y}`;
+    const lineD = `M ${p0.x} ${p0.y} L ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y}`;
 
     const fillD = `${lineD} L ${width} ${height} L 0 ${height} Z`;
 
@@ -192,40 +185,24 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
           <div className="flex items-center gap-2 pl-2 border-l border-white/5 shrink-0 h-[72px]">
             <div className="w-[100px] bg-black rounded-sm border border-white/5 shadow-[inset_0_0_10px_rgba(0,0,0,0.8)] p-0.5 h-full flex items-center justify-center relative overflow-hidden">
               <svg viewBox="0 0 160 90" preserveAspectRatio="none" className="w-full h-full">
-                {/* Base Envelope (Lower opacity) */}
-                <path d={graphData.fillD} fill="#00d4c1" fillOpacity="0.05" />
-                <path d={graphData.lineD} fill="none" stroke="#ffffff" strokeOpacity="0.15" strokeWidth="1" />
+                {/* Solid Fill Background */}
+                <path d={graphData.fillD} fill="#00d4c1" fillOpacity="0.08" />
 
-                {/* Active Level Highlighting (Neon Cyan) */}
-                {envState !== undefined && envState < 4 && (
-                  <>
-                    <line
-                      x1={graphData.points[envState].x}
-                      y1={graphData.points[envState].y}
-                      x2={graphData.points[envState + 1].x}
-                      y2={graphData.points[envState + 1].y}
-                      stroke="#00ffff"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      className="drop-shadow-[0_0_5px_#00ffff]"
-                    />
-                    <circle
-                      cx={graphData.points[envState + 1].x}
-                      cy={graphData.points[envState + 1].y}
-                      r="3.5"
-                      fill="#00ffff"
-                      className="shadow-[0_0_12px_#00ffff]"
-                    />
-                  </>
-                )}
+                {/* Pre-rendered lines for all 4 stages to prevent DOM thrashing/flickering */}
+                {[0, 1, 2, 3].map(i => (
+                  <line
+                    key={i}
+                    x1={graphData.points[i].x}
+                    y1={graphData.points[i].y}
+                    x2={graphData.points[i + 1].x}
+                    y2={graphData.points[i + 1].y}
+                    stroke={envState === i ? "#ffffff" : "#ffffff"}
+                    strokeOpacity={envState === i ? 1 : 0.2}
+                    strokeWidth={envState === i ? (envState === i ? 2 : 1) : 1}
+                    className="transition-[stroke-opacity,stroke-width] duration-150"
+                  />
+                ))}
               </svg>
-
-              {/* Vibrant Stage Indicator Badge */}
-              {envState !== undefined && envState < 4 && (
-                <div className="absolute top-1 left-1.5 px-1.5 py-0.5 bg-[#00ffff] text-black text-[7px] font-black rounded-sm shadow-[0_0_10px_rgba(0,255,255,0.5)] tracking-tighter uppercase">
-                  S{envState + 1}
-                </div>
-              )}
             </div>
 
             <div className="flex flex-col items-center gap-1">

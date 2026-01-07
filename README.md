@@ -21,9 +21,11 @@
 
 - **6-Operator Engine**: Faithfully recreated FM synthesis engine with 32 classic algorithms.
 - **Real-time Editor**: Precise control over Operator parameters including Frequency (Coarse/Fine/Detune), Envelopes (Rate/Level), Level Scaling, and Sensitivity.
+- **Library Management**: Built-in access to classic ROM banks (ROM1A-ROM4B) and support for custom `.syx` imports.
+- **Patch Export**: Export your sound designs as standard `.syx` files for use with hardware or other simulators.
 - **WebMIDI Integration**: Connect your MIDI controllers for expressive performance with support for Note On/Off, Velocity, Pitch Bend, Modulation Wheel, and Aftertouch.
-- **SysEx Support**: Import and Export `.syx` files. Sync your patches in real-time with compatible hardware synthesizers.
-- **Retro-Inspired UI**: A modern take on the classic DX-style aesthetic, featuring a high-contrast LCD screen, membrane-style buttons, and a tactile control layout.
+- **SysEx Support**: Bi-directional communication with hardware. Import, Export, and Sync your patches in real-time.
+- **Retro-Inspired UI**: A high-fidelity, high-contrast interface designed for clarity and performance, featuring solid state visualization and tactile controls.
 - **Low Latency**: Built with the latest Web Audio API and custom `AudioWorklet` for responsive, performance-ready synthesis.
 
 ## 🛠 Tech Stack
@@ -81,9 +83,11 @@ Open the **MIDI Configuration** panel to select your input/output devices. Enabl
 ### 주요 특징
 - **6-오퍼레이터 엔진**: 32가지 클래식 알고리즘을 지원하는 고정밀 FM 엔진.
 - **실시간 에디터**: 주파수, 엔벨로프, 레벨 등 모든 파라미터를 브라우저에서 즉시 수정 가능.
+- **라이브러리 관리**: 기본 ROM 뱅크(1A-4B) 탑재 및 사용자 SysEx 파일 관리.
+- **패치 익스포트**: 나만의 사운드를 `.syx` 파일로 내보내 하드웨어 장비와 호환 가능.
 - **WebMIDI 연동**: MIDI 컨트롤러를 통한 연주 및 실시간 파라미터 제어.
 - **SysEx 지원**: `.syx` 파일 임포트/익스포트 및 하드웨어 장치와의 실시간 데이터 동기화.
-- **레트로 디자인**: DX 시리즈의 미학을 현대적으로 재해석한 프리미엄 UI.
+- **고대비 UI**: 시인성이 개선된 프리미엄 레트로 디자인 및 실시간 엔벨로프 시각화.
 
 ---
 

@@ -56,6 +56,12 @@ const App: React.FC = () => {
     return localStorage.getItem('ddxx7_midi_output') || '';
   });
 
+  const [currentRom, setCurrentRom] = useState('rom1a.syx');
+  const ROMS = [
+    'rom1a.syx', 'rom1b.syx', 'rom2a.syx', 'rom2b.syx',
+    'rom3a.syx', 'rom3b.syx', 'rom4a.syx', 'rom4b.syx'
+  ];
+
   // MIDI Persistence Savers
   useEffect(() => {
     localStorage.setItem('ddxx7_midi_inputs', JSON.stringify(Array.from(selectedInputs)));
@@ -87,8 +93,8 @@ const App: React.FC = () => {
     });
   }, []);
 
-  useEffect(() => {
-    fetch('./assets/patches/rom1a.syx')
+  const loadRom = useCallback((romName: string) => {
+    fetch(`./assets/patches/${romName}`)
       .then(res => res.arrayBuffer())
       .then(buffer => {
         const patches = SysExHandler.parseFile(buffer);
@@ -97,9 +103,14 @@ const App: React.FC = () => {
           setPatch(patches[0]);
           setCurrentPatchIndex(0);
           engineRef.current?.updatePatch(patches[0]);
+          setCurrentRom(romName);
         }
       })
-      .catch(err => console.warn("rom1a.syx loading skipped"));
+      .catch(err => console.warn(`${romName} loading failed`, err));
+  }, []);
+
+  useEffect(() => {
+    loadRom(currentRom);
   }, []);
 
   const handlePanic = () => {
@@ -239,6 +250,17 @@ const App: React.FC = () => {
     engineRef.current?.updatePatch(patches[0]);
   }, []);
 
+  const handleDownloadPatch = useCallback(() => {
+    const data = SysExHandler.createSingleVoiceDump(patch);
+    const blob = new Blob([data], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${patch.name.trim() || 'PATCH'}.syx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [patch]);
+
   return (
     <div className="flex flex-col h-screen bg-[#0a0a0a] text-gray-300 font-inter overflow-hidden relative">
       <FileImporter
@@ -277,13 +299,51 @@ const App: React.FC = () => {
         <div className="flex items-center gap-6">
           <div className="text-2xl font-orbitron font-bold text-dx7-teal tracking-tighter">DDXX7</div>
           <div className="flex bg-[#111] rounded p-0.5 border border-[#333]">
-            <button onClick={() => setActiveViewVal('edit')} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${activeViewVal === 'edit' ? 'bg-black text-dx7-ink border border-dx7-teal shadow-[0_0_10px_rgba(0,212,193,0.15)]' : 'text-gray-500 hover:text-gray-300'}`}>Editor</button>
-            <button onClick={() => setActiveViewVal('library')} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${activeViewVal === 'library' ? 'bg-black text-dx7-ink border border-dx7-teal shadow-[0_0_10px_rgba(0,212,193,0.15)]' : 'text-gray-500 hover:text-gray-300'}`}>Library</button>
+            <button onClick={() => setActiveViewVal('edit')} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${activeViewVal === 'edit' ? 'bg-dx7-teal text-black shadow-[0_0_15px_rgba(0,212,193,0.4)]' : 'text-gray-400 hover:text-white'}`}>Editor</button>
+            <button onClick={() => setActiveViewVal('library')} className={`px-4 py-1.5 rounded text-[10px] font-bold uppercase transition-all ${activeViewVal === 'library' ? 'bg-dx7-teal text-black shadow-[0_0_15px_rgba(0,212,193,0.4)]' : 'text-gray-400 hover:text-white'}`}>Library</button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setIsMidiPanelOpen(!isMidiPanelOpen)} className={`p-1.5 rounded-full border transition-all ${isMidiPanelOpen ? 'bg-dx7-teal/20 border-dx7-teal text-dx7-teal shadow-[0_0_12px_rgba(0,212,193,0.3)]' : 'border-[#333] text-gray-500 hover:text-dx7-teal'}`} title="MIDI Settings"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="8" r="1.2" fill="currentColor" stroke="none" /><circle cx="8" cy="10" r="1.2" fill="currentColor" stroke="none" /><circle cx="16" cy="10" r="1.2" fill="currentColor" stroke="none" /><circle cx="7" cy="14" r="1.2" fill="currentColor" stroke="none" /><circle cx="17" cy="14" r="1.2" fill="currentColor" stroke="none" /></svg></button>
-          <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-gray-500 hover:text-dx7-teal transition-colors" title="Import SysEx/Patch File"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4" /></svg></button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-[#111] border border-[#333] p-0.5 rounded">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1.5 text-gray-400 hover:text-dx7-teal hover:bg-black/40 rounded transition-all"
+              title="Import SysEx/Patch File"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </button>
+            <div className="w-px h-3 bg-[#333]"></div>
+            <button
+              onClick={handleDownloadPatch}
+              className="p-1.5 text-gray-400 hover:text-dx7-teal hover:bg-black/40 rounded transition-all"
+              title="Export Current Patch (SysEx)"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </button>
+          </div>
+
+          <button
+            onClick={() => setIsMidiPanelOpen(!isMidiPanelOpen)}
+            className={`p-1.5 rounded-full border transition-all ${isMidiPanelOpen ? 'bg-dx7-teal text-black shadow-[0_0_12px_rgba(0,212,193,0.5)] border-dx7-teal' : 'border-[#333] text-gray-400 hover:text-dx7-teal hover:border-dx7-teal/50'}`}
+            title="MIDI Settings"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="8" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="8" cy="11" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="11" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="9" cy="15" r="1.5" fill="currentColor" stroke="none" />
+              <circle cx="15" cy="15" r="1.5" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -353,7 +413,18 @@ const App: React.FC = () => {
           </div>
         ) : (
           <div className="px-4 md:px-8 w-full h-full pb-20">
-            <div className="bg-black/30 p-8 rounded-lg border border-[#333] h-full overflow-y-auto max-w-7xl mx-auto shadow-inner custom-scrollbar">
+            <div className="bg-black/30 p-4 md:p-8 rounded-lg border border-[#333] h-full overflow-y-auto max-w-7xl mx-auto shadow-inner custom-scrollbar">
+              <div className="flex flex-wrap gap-2 mb-8 border-b border-white/10 pb-6">
+                {ROMS.map(rom => (
+                  <button
+                    key={rom}
+                    onClick={() => loadRom(rom)}
+                    className={`px-4 py-2 rounded text-[10px] font-bold uppercase transition-all ${currentRom === rom ? 'bg-dx7-teal text-black shadow-[0_0_15px_rgba(0,212,193,0.4)]' : 'bg-[#111] text-gray-300 border border-white/10 hover:border-dx7-teal/40 hover:text-white'}`}
+                  >
+                    {rom.replace('.syx', '').toUpperCase()}
+                  </button>
+                ))}
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
                 {library.map((p, idx) => (
                   <button key={idx} onClick={() => {
@@ -362,7 +433,7 @@ const App: React.FC = () => {
                     engineRef.current?.updatePatch(p);
                     if (isAutoSyncEnabled) handleSendToHW(p);
                     setActiveViewVal('edit');
-                  }} className={`p-4 text-left font-mono text-[10px] rounded border transition-all active:scale-95 ${patch.name === p.name ? 'bg-black text-dx7-ink border-dx7-teal shadow-[0_0_20px_rgba(0,212,193,0.25)]' : 'bg-[#111] text-gray-500 border-white/5 hover:border-dx7-teal/40'}`}>
+                  }} className={`p-4 text-left font-mono text-[10px] rounded border transition-all active:scale-95 ${patch.name === p.name ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_20px_rgba(0,212,193,0.25)]' : 'bg-[#111] text-gray-300 border-white/10 hover:border-dx7-teal/40 hover:text-white'}`}>
                     <div className="opacity-30 mb-1">{(idx + 1).toString().padStart(2, '0')}</div>
                     <div className="truncate font-bold text-[12px] tracking-tighter">{p.name || "UNNAMED"}</div>
                   </button>

@@ -1,7 +1,9 @@
 <div align="center">
   
-  # DDXX7
-  **A high-fidelity FM synthesis simulator and SysEx editor.**
+# DDXX7
+**A high-fidelity FM synthesis simulator and SysEx editor.**
+
+[**🚀 Play Live Demo**](https://acidsound.github.io/ddxx7/) | [**📖 User Manual**](./MANUAL.md)
   
   [![Vite](https://img.shields.io/badge/Vite-6.2.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
   [![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)

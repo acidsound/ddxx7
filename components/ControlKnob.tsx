@@ -43,7 +43,7 @@ export default function ControlKnob({ label, value, min, max, onChange, size = 3
   return (
     <div className="flex flex-col items-center gap-1 group relative">
       {isDragging && (
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-teal font-mono text-[9px] px-1.5 py-0.5 rounded shadow-lg z-300 animate-in fade-in zoom-in duration-75 whitespace-nowrap">
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-teal font-mono text-[9px] px-1.5 py-0.5 rounded shadow-lg z-300 whitespace-nowrap">
           {formattedValue}
         </div>
       )}
@@ -52,6 +52,7 @@ export default function ControlKnob({ label, value, min, max, onChange, size = 3
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{ width: size, height: size }}
       >
         <div className="w-full h-full rounded-full bg-[#111] border border-[#333] shadow-inner flex items-center justify-center overflow-hidden">

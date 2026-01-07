@@ -49,12 +49,13 @@ const ControlSlider: React.FC<SliderProps> = ({ label, value, min, max, onChange
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         className="flex-grow flex items-center justify-center w-full bg-black rounded-sm border border-[#333] relative cursor-ns-resize overflow-hidden touch-none"
       >
         {/* Internal Value Popover */}
         {isDragging && (
           <div className="absolute top-1 inset-x-0 text-center z-50 pointer-events-none">
-            <span className="bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-teal font-mono text-[8px] px-0.5 rounded shadow-sm animate-in fade-in duration-75">
+            <span className="bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-teal font-mono text-[8px] px-0.5 rounded shadow-sm">
               {value}
             </span>
           </div>
@@ -75,7 +76,7 @@ const ControlSlider: React.FC<SliderProps> = ({ label, value, min, max, onChange
         
         {/* Thumb */}
         <div 
-          className={`absolute inset-x-0.5 h-1.5 md:h-2 rounded-sm shadow-sm transition-colors duration-75 pointer-events-none z-10 ${isDragging ? 'bg-[#7efab4] shadow-[0_0_6px_rgba(126,250,180,0.6)]' : 'bg-dx7-teal'}`}
+          className={`absolute inset-x-0.5 h-1.5 md:h-2 rounded-sm shadow-sm pointer-events-none z-10 ${isDragging ? 'bg-[#7efab4] shadow-[0_0_6px_rgba(126,250,180,0.6)]' : 'bg-dx7-teal'}`}
           style={{ 
             bottom: `calc(${thumbPos}% - 3px)`,
             boxShadow: '0 0 3px rgba(0,0,0,0.5)'

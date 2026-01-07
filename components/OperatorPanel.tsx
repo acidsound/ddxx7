@@ -199,7 +199,6 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
                     stroke={envState === i ? "#ffffff" : "#ffffff"}
                     strokeOpacity={envState === i ? 1 : 0.2}
                     strokeWidth={envState === i ? (envState === i ? 2 : 1) : 1}
-                    className="transition-[stroke-opacity,stroke-width] duration-150"
                   />
                 ))}
               </svg>

@@ -84,7 +84,7 @@ const ControlSlider: React.FC<SliderProps> = ({ label, value, min, max, onChange
         </div>
       </div>
 
-      <span className="text-[7px] text-gray-500 font-bold uppercase tracking-tighter mt-0.5">{label}</span>
+      <span className="text-[7px] text-gray-400 font-bold uppercase tracking-tighter mt-0.5">{label}</span>
     </div>
   );
 };

@@ -290,7 +290,7 @@ const App: React.FC = () => {
           <div className="flex flex-col gap-3">
             <h2 className="text-white font-orbitron text-3xl md:text-4xl font-bold tracking-[0.4em]">DDXX7</h2>
             <div className="h-px w-24 bg-dx7-teal/30 mx-auto"></div>
-            <p className="text-dx7-teal font-mono text-[10px] uppercase tracking-[0.6em] opacity-60">Initialize FM Engine</p>
+            <p className="text-dx7-teal font-mono text-[10px] uppercase tracking-[0.6em] opacity-80">Initialize FM Engine</p>
           </div>
         </div>
       )}
@@ -354,21 +354,21 @@ const App: React.FC = () => {
             {/* Left Column: Global Settings (Voice, Algorithm, Tone, Pitch Env) */}
             <div className="w-full lg:w-[55%] flex flex-col lg:overflow-y-auto custom-scrollbar lg:border-b border-white/10">
               <div className="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center lg:sticky lg:top-0 lg:z-20">
-                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.4em]">Patch info</h4>
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em]">Patch info</h4>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2 lg:gap-0">
                 {/* Column 1: Voice & Algorithm */}
                 <div className="flex flex-col bg-[#111]/40 p-2 lg:p-2 border-r border-b border-white/5">
                   <div className="flex flex-col gap-1.5">
                     <div className="flex justify-between items-end px-1">
-                      <div className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">Voice Info</div>
+                      <div className="text-[9px] text-gray-400 font-bold uppercase tracking-[0.2em]">Voice Info</div>
                       <div className="flex gap-1 bg-black/60 p-0.5 rounded border border-white/5">
                         <button onClick={() => handlePatchSwitch((currentPatchIndex - 1 + library.length) % library.length)} className="w-6 h-4 flex items-center justify-center bg-black hover:bg-[#222] text-dx7-teal border border-white/10 rounded-sm transition-all active:scale-95"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
                         <button onClick={() => handlePatchSwitch((currentPatchIndex + 1) % library.length)} className="w-6 h-4 flex items-center justify-center bg-black hover:bg-[#222] text-dx7-teal border border-white/10 rounded-sm transition-all active:scale-95"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
                       </div>
                     </div>
                     <div className={`lcd-screen w-full h-[110px] lg:h-[84px] p-3 rounded border-[3px] border-[#050505] relative flex flex-col justify-between overflow-hidden shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] ${isSendingToHW ? 'brightness-125' : ''}`}>
-                      <div className="flex justify-between items-center text-[8px] font-bold tracking-[0.1em]"><span className="opacity-40 uppercase tracking-widest text-[#7efab4]">DX7 SIM</span>{isAutoSyncEnabled && <div className="text-dx7-teal animate-pulse">SYNC</div>}</div>
+                      <div className="flex justify-between items-center text-[8px] font-bold tracking-[0.1em]"><span className="opacity-60 uppercase tracking-widest text-[#7efab4]">DX7 SIM</span>{isAutoSyncEnabled && <div className="text-dx7-teal animate-pulse">SYNC</div>}</div>
                       <div className="flex-grow flex items-center">
                         <input className="bg-transparent text-lg lg:text-base font-mono w-full outline-none uppercase tracking-[0.15em] text-[#7efab4] font-bold" value={patch.name} onChange={e => updatePatch({ name: e.target.value.toUpperCase() })} />
                       </div>
@@ -400,7 +400,7 @@ const App: React.FC = () => {
             {/* Right Column: Operators 1-6 */}
             <div className="w-full flex flex-col border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0d0d0d] lg:h-full lg:overflow-y-auto custom-scrollbar">
               <div className="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center lg:sticky lg:top-0 lg:z-20">
-                <h4 className="text-[10px] font-bold text-gray-600 uppercase tracking-[0.4em]">Operator Configuration (1-6)</h4>
+                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em]">Operator Configuration (1-6)</h4>
               </div>
               <div className="flex flex-col">
                 {patch.operators.map((op, i) => (
@@ -434,7 +434,7 @@ const App: React.FC = () => {
                     if (isAutoSyncEnabled) handleSendToHW(p);
                     setActiveViewVal('edit');
                   }} className={`p-4 text-left font-mono text-[10px] rounded border transition-all active:scale-95 ${patch.name === p.name ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_20px_rgba(0,212,193,0.25)]' : 'bg-[#111] text-gray-300 border-white/10 hover:border-dx7-teal/40 hover:text-white'}`}>
-                    <div className="opacity-30 mb-1">{(idx + 1).toString().padStart(2, '0')}</div>
+                    <div className="opacity-60 mb-1">{(idx + 1).toString().padStart(2, '0')}</div>
                     <div className="truncate font-bold text-[12px] tracking-tighter">{p.name || "UNNAMED"}</div>
                   </button>
                 ))}
@@ -449,11 +449,11 @@ const App: React.FC = () => {
         <div className="p-4 h-full flex flex-col max-w-4xl mx-auto gap-3">
           <div className="flex justify-between items-center">
             <h3 className="text-dx7-teal font-orbitron font-bold text-[10px] uppercase tracking-[0.4em]">MIDI CONFIGURATION</h3>
-            <button onClick={() => setIsMidiPanelOpen(false)} className="text-gray-500 hover:text-white transition-colors text-[9px] font-bold uppercase tracking-widest">CLOSE</button>
+            <button onClick={() => setIsMidiPanelOpen(false)} className="text-gray-400 hover:text-white transition-colors text-[9px] font-bold uppercase tracking-widest">CLOSE</button>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">INPUTS</span>
+              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">INPUTS</span>
               <select
                 className="bg-[#111] border border-[#333] p-2 text-[11px] rounded text-dx7-teal outline-none focus:border-dx7-teal/50 transition-colors cursor-pointer"
                 value={Array.from(selectedInputs)[0] || ""}
@@ -464,7 +464,7 @@ const App: React.FC = () => {
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-gray-600 font-bold uppercase tracking-widest">TRANSMIT TARGET</span>
+              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">TRANSMIT TARGET</span>
               <select
                 className="bg-[#111] border border-[#333] p-2 text-[11px] rounded text-dx7-teal outline-none focus:border-dx7-teal/50 transition-colors cursor-pointer"
                 value={selectedOutput}

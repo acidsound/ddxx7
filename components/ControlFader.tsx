@@ -63,7 +63,7 @@ export default function ControlFader({ value, min, max, onChange, height = 50, l
                     <div className="w-full h-px bg-[#222]" />
                 </div>
             </div>
-            {label && <span className="text-[6px] text-gray-700 font-bold uppercase mt-1">{label}</span>}
+            {label && <span className="text-[6px] text-gray-400 font-bold uppercase mt-1">{label}</span>}
         </div>
     );
 }

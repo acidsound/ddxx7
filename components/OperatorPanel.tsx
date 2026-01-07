@@ -147,7 +147,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
                 >
                   {params.oscMode === 0 ? 'RT' : 'FX'}
                 </button>
-                <span className="text-[6px] text-gray-700 font-bold uppercase">MODE</span>
+                <span className="text-[6px] text-gray-400 font-bold uppercase">MODE</span>
               </div>
               <ControlKnob label="COARSE" min={0} max={31} value={params.freqCoarse} onChange={v => update('freqCoarse', v)} size={32} />
               <ControlKnob label="FINE" min={0} max={99} value={params.freqFine} onChange={v => update('freqFine', v)} size={32} />
@@ -165,7 +165,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
               >
                 <CurveIcon type={params.keyScaleCurveL} />
               </button>
-              <span className="text-[6px] text-gray-500 font-bold uppercase">L-CRV</span>
+              <span className="text-[6px] text-gray-400 font-bold uppercase">L-CRV</span>
             </div>
             <ControlKnob label="BRK" min={0} max={99} value={params.keyScaleBreakpoint} onChange={v => update('keyScaleBreakpoint', v)} size={32} displayValue={getNoteName} />
             <ControlKnob label="RATE" min={0} max={7} value={params.keyScaleRate} onChange={v => update('keyScaleRate', v)} size={32} />
@@ -176,7 +176,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
               >
                 <CurveIcon type={params.keyScaleCurveR} mirrored={true} />
               </button>
-              <span className="text-[6px] text-gray-500 font-bold uppercase">R-CRV</span>
+              <span className="text-[6px] text-gray-400 font-bold uppercase">R-CRV</span>
             </div>
             <ControlKnob label="R.DEP" min={0} max={99} value={params.keyScaleDepthR} onChange={v => update('keyScaleDepthR', v)} size={32} />
           </div>
@@ -206,7 +206,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
             </div>
 
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[6px] text-gray-500 font-bold uppercase tracking-tighter">LEVEL</span>
+              <span className="text-[6px] text-gray-400 font-bold uppercase tracking-tighter">LEVEL</span>
               <div className="flex flex-col items-center bg-black/30 p-1 rounded-sm border border-white/5 h-[62px] justify-center">
                 <div className="flex gap-2 items-center px-1">
                   {params.levels.map((l, i) => (
@@ -216,7 +216,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
               </div>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-[6px] text-gray-500 font-bold uppercase tracking-tighter">RATE</span>
+              <span className="text-[6px] text-gray-400 font-bold uppercase tracking-tighter">RATE</span>
               <div className="flex flex-col items-center bg-black/30 p-1 rounded-sm border border-white/5 h-[62px] justify-center">
                 <div className="flex gap-2 items-center px-1">
                   {params.rates.map((r, i) => (

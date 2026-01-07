@@ -23,7 +23,7 @@ export default function ToggleSwitch({ label, active, onChange }: ToggleSwitchPr
         </div>
         <div className={`w-1.5 h-1.5 rounded-full border border-black shrink-0 transition-all ${active ? 'bg-[#7efab4] shadow-[0_0_8px_#7efab4]' : 'bg-[#1a221d]'}`}></div>
       </div>
-      <span className="text-[7.5px] md:text-[8px] font-bold text-gray-400 uppercase tracking-tighter text-center leading-[1.1] truncate w-full px-0.5">
+      <span className="text-[7.5px] md:text-[8px] font-bold text-gray-300 uppercase tracking-tighter text-center leading-[1.1] truncate w-full px-0.5">
         {label}
       </span>
     </div>

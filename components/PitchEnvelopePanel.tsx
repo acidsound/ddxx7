@@ -52,7 +52,7 @@ export default function PitchEnvelopePanel({ patch, onChange }: PitchEnvelopePan
   return (
     <div className="bg-[#1a1a1a] p-1.5 lg:p-1 border-none flex flex-col gap-2 lg:gap-1 shadow-2xl relative w-full">
       <div className="flex items-center justify-between border-b border-white/5 pb-0.5 mb-0.5">
-        <h3 className="text-[8px] font-bold text-gray-500 uppercase tracking-widest font-orbitron">Global Pitch Envelope</h3>
+        <h3 className="text-[8px] font-bold text-gray-400 uppercase tracking-widest font-orbitron">Global Pitch Envelope</h3>
       </div>
       <div className="w-full bg-black/60 rounded-sm border border-white/5 p-0.5 h-[80px] lg:h-[60px] flex items-center justify-center relative overflow-hidden">
         <svg viewBox="0 0 240 80" preserveAspectRatio="none" className="w-full h-full opacity-80">
@@ -63,7 +63,7 @@ export default function PitchEnvelopePanel({ patch, onChange }: PitchEnvelopePan
       </div>
       <div className="flex gap-2 justify-center py-2">
         <div className="flex flex-col items-center gap-1">
-          <span className="text-[6px] text-gray-500 font-bold uppercase tracking-tighter">LEVEL</span>
+          <span className="text-[6px] text-gray-400 font-bold uppercase tracking-tighter">LEVEL</span>
           <div className="flex flex-col items-center bg-black/30 p-1 rounded-sm border border-white/5 h-[106px] justify-center">
             <div className="flex gap-2 px-1">
               {levels.map((l, i) => (
@@ -73,7 +73,7 @@ export default function PitchEnvelopePanel({ patch, onChange }: PitchEnvelopePan
           </div>
         </div>
         <div className="flex flex-col items-center gap-1">
-          <span className="text-[6px] text-gray-500 font-bold uppercase tracking-tighter">RATE</span>
+          <span className="text-[6px] text-gray-400 font-bold uppercase tracking-tighter">RATE</span>
           <div className="flex flex-col items-center bg-black/30 p-1 rounded-sm border border-white/5 h-[106px] justify-center">
             <div className="flex gap-2 px-1">
               {rates.map((r, i) => (
@@ -83,7 +83,7 @@ export default function PitchEnvelopePanel({ patch, onChange }: PitchEnvelopePan
           </div>
         </div>
       </div>
-      <div className="text-[7px] text-gray-600 font-bold uppercase tracking-widest text-center mt-auto opacity-50">
+      <div className="text-[7px] text-gray-400 font-bold uppercase tracking-widest text-center mt-auto opacity-70">
         PITCH EG
       </div>
     </div>

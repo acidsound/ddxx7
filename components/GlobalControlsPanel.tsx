@@ -30,7 +30,7 @@ export default function GlobalControlsPanel({ patch, onChange }: GlobalControlsP
   return (
     <div className="bg-[#1a1a1a] p-1.5 lg:p-1 border-none flex flex-col gap-2 shadow-xl w-full">
       <div className="flex items-center justify-between border-b border-white/5 pb-0.5 mb-0.5">
-        <h3 className="text-[8px] font-bold text-gray-500 uppercase tracking-widest font-orbitron">Global Tone generator</h3>
+        <h3 className="text-[8px] font-bold text-gray-400 uppercase tracking-widest font-orbitron">Global Tone generator</h3>
       </div>
       {/* LFO Modulation Section */}
       <div className="flex flex-col gap-3 lg:gap-1.5">
@@ -42,7 +42,7 @@ export default function GlobalControlsPanel({ patch, onChange }: GlobalControlsP
             >
               {renderWaveIcon()}
             </button>
-            <span className="text-[7px] font-bold text-gray-500 uppercase tracking-tighter">Wave</span>
+            <span className="text-[7px] font-bold text-gray-400 uppercase tracking-tighter">Wave</span>
           </div>
           <ControlKnob label="P Mod" min={0} max={7} value={patch.lfoPitchModSens} onChange={v => onChange({ lfoPitchModSens: v })} size={28} />
           <ControlKnob label="Speed" min={0} max={99} value={patch.lfoSpeed} onChange={v => onChange({ lfoSpeed: v })} size={28} />
@@ -82,7 +82,7 @@ export default function GlobalControlsPanel({ patch, onChange }: GlobalControlsP
       </div>
 
       {/* Small label */}
-      <div className="text-[7px] text-gray-600 font-bold uppercase tracking-widest text-center mt-auto opacity-50">
+      <div className="text-[7px] text-gray-400 font-bold uppercase tracking-widest text-center mt-auto opacity-70">
         TONE / LFO
       </div>
     </div>

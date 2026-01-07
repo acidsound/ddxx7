@@ -63,7 +63,7 @@ export default function ControlKnob({ label, value, min, max, onChange, size = 3
           </div>
         </div>
       </div>
-      <span className="text-[8px] md:text-[9px] text-gray-400 uppercase font-bold tracking-tight text-center leading-tight max-w-[50px] line-clamp-2 min-h-[1.5em]">{label}</span>
+      <span className="text-[8px] md:text-[9px] text-gray-300 uppercase font-bold tracking-tight text-center leading-tight max-w-[50px] line-clamp-2 min-h-[1.5em]">{label}</span>
     </div>
   );
 }

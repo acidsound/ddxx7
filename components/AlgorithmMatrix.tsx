@@ -147,7 +147,7 @@ export default function AlgorithmMatrix({ algorithmId, levels }: AlgorithmMatrix
           100% { transform: translate(1px, -2px) rotate(-1deg); }
         }
       `}</style>
-      <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] text-gray-700 font-bold uppercase tracking-[0.4em] opacity-50 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] text-gray-400 font-bold uppercase tracking-[0.4em] opacity-70 group-hover:opacity-100 transition-opacity">
         ALGORITHM {algorithmId}
       </div>
 

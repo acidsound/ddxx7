@@ -54,7 +54,7 @@ const ControlSlider: React.FC<SliderProps> = ({ label, value, min, max, onChange
         {/* Internal Value Popover */}
         {isDragging && (
           <div className="absolute top-1 inset-x-0 text-center z-50 pointer-events-none">
-            <span className="bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-ink font-mono text-[8px] px-0.5 rounded shadow-sm animate-in fade-in duration-75">
+            <span className="bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-teal font-mono text-[8px] px-0.5 rounded shadow-sm animate-in fade-in duration-75">
               {value}
             </span>
           </div>

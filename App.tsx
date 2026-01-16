@@ -78,6 +78,7 @@ const App: React.FC = () => {
   const [isSendingToHW, setIsSendingToHW] = useState(false);
   const [isReceivingFromHW, setIsReceivingFromHW] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
+  const [isAudioSuspended, setIsAudioSuspended] = useState(false);
 
   const engineRef = useRef<DX7Engine | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +93,27 @@ const App: React.FC = () => {
       if (states) setOpStates(states);
     });
   }, []);
+
+  // iOS Safari Background Resume Handler
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isAudioUnlocked) {
+        // Check if AudioContext got suspended (common on iOS Safari background return)
+        const ctx = engineRef.current?.getContext();
+        if (ctx && ctx.state === 'suspended') {
+          setIsAudioSuspended(true);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isAudioUnlocked]);
+
+  const handleResumeAudio = async () => {
+    await engineRef.current?.unlock();
+    setIsAudioSuspended(false);
+  };
 
   const loadRom = useCallback((romName: string) => {
     fetch(`./assets/patches/${romName}`)
@@ -291,6 +313,28 @@ const App: React.FC = () => {
             <h2 className="text-white font-orbitron text-3xl md:text-4xl font-bold tracking-[0.4em]">DDXX7</h2>
             <div className="h-px w-24 bg-dx7-teal/30 mx-auto"></div>
             <p className="text-dx7-teal font-mono text-[10px] uppercase tracking-[0.6em] opacity-80">Initialize FM Engine</p>
+          </div>
+        </div>
+      )}
+
+      {/* iOS Safari Background Resume Overlay */}
+      {isAudioUnlocked && isAudioSuspended && (
+        <div
+          className="fixed inset-0 z-[280] bg-black/90 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md cursor-pointer"
+          onClick={handleResumeAudio}
+        >
+          <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
+            <div className="w-24 h-24 border-2 border-amber-400/60 rounded-full flex items-center justify-center animate-pulse">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                <line x1="22" y1="9" x2="22" y2="15"></line>
+                <line x1="18" y1="5" x2="18" y2="19"></line>
+              </svg>
+            </div>
+            <div className="flex flex-col gap-2">
+              <h3 className="text-amber-400 font-orbitron text-lg font-bold tracking-widest uppercase">Audio Paused</h3>
+              <p className="text-gray-400 text-xs tracking-wide">Tap anywhere to resume</p>
+            </div>
           </div>
         </div>
       )}

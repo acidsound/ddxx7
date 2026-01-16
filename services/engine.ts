@@ -65,4 +65,7 @@ export class DX7Engine {
   public onOpLevels(callback: (levels: Float32Array, envStates?: Int8Array) => void) {
     this.opLevelsHandler = callback;
   }
+
+  getContext() { return this.context; }
+  getState() { return this.context.state; }
 }

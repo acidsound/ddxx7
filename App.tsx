@@ -98,9 +98,10 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isAudioUnlocked) {
-        // Check if AudioContext got suspended (common on iOS Safari background return)
+        // Check if AudioContext got suspended or interrupted (iOS Safari uses both states)
         const ctx = engineRef.current?.getContext();
-        if (ctx && ctx.state === 'suspended') {
+        const state = ctx?.state as string;
+        if (ctx && (state === 'suspended' || state === 'interrupted')) {
           setIsAudioSuspended(true);
         }
       }

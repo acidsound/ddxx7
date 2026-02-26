@@ -83,15 +83,31 @@ const App: React.FC = () => {
   const engineRef = useRef<DX7Engine | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastSyncTimeRef = useRef<number>(0);
+  const sendTimerRef = useRef<number | null>(null);
+  const receiveTimerRef = useRef<number | null>(null);
   const [opLevels, setOpLevels] = useState<Float32Array>(new Float32Array(6));
   const [opStates, setOpStates] = useState<Int8Array>(new Int8Array(6).fill(4));
 
   useEffect(() => {
-    engineRef.current = new DX7Engine(PRESETS[0]);
-    engineRef.current.onOpLevels((levels, states) => {
+    const engine = new DX7Engine(PRESETS[0]);
+    engineRef.current = engine;
+    engine.onOpLevels((levels, states) => {
       setOpLevels(levels);
       if (states) setOpStates(states);
     });
+
+    return () => {
+      if (sendTimerRef.current !== null) {
+        window.clearTimeout(sendTimerRef.current);
+        sendTimerRef.current = null;
+      }
+      if (receiveTimerRef.current !== null) {
+        window.clearTimeout(receiveTimerRef.current);
+        receiveTimerRef.current = null;
+      }
+      engineRef.current = null;
+      void engine.dispose().catch(err => console.error('Audio dispose failed', err));
+    };
   }, []);
 
   // iOS Safari Background Resume Handler
@@ -150,7 +166,11 @@ const App: React.FC = () => {
     if (out) {
       setIsSendingToHW(true);
       out.send(SysExHandler.createSingleVoiceDump(p));
-      setTimeout(() => setIsSendingToHW(false), 120);
+      if (sendTimerRef.current !== null) window.clearTimeout(sendTimerRef.current);
+      sendTimerRef.current = window.setTimeout(() => {
+        setIsSendingToHW(false);
+        sendTimerRef.current = null;
+      }, 120);
     }
   }, [midiAccess, selectedOutput]);
 
@@ -162,7 +182,11 @@ const App: React.FC = () => {
       // Send Voice Dump Request to DX7
       out.send(SysExHandler.createVoiceDumpRequest());
       // Reset the receiving state after a timeout (DX7 should respond within 500ms)
-      setTimeout(() => setIsReceivingFromHW(false), 1500);
+      if (receiveTimerRef.current !== null) window.clearTimeout(receiveTimerRef.current);
+      receiveTimerRef.current = window.setTimeout(() => {
+        setIsReceivingFromHW(false);
+        receiveTimerRef.current = null;
+      }, 1500);
     }
   }, [midiAccess, selectedOutput]);
 
@@ -182,18 +206,29 @@ const App: React.FC = () => {
   }, [isAutoSyncEnabled, handleSendToHW]);
 
   useEffect(() => {
+    let mounted = true;
+    let localAccess: MIDIAccess | null = null;
+
     if (navigator.requestMIDIAccess) {
       navigator.requestMIDIAccess({ sysex: true }).then(access => {
+        if (!mounted) return;
+        localAccess = access;
         setMidiAccess(access);
         const update = () => {
+          if (!mounted) return;
           const ins: MidiDevice[] = []; const outs: MidiDevice[] = [];
           access.inputs.forEach(i => ins.push({ id: i.id, name: i.name || '?', manufacturer: i.manufacturer || '?' }));
           access.outputs.forEach(o => outs.push({ id: o.id, name: o.name || '?', manufacturer: o.manufacturer || '?' }));
           setInputs(ins); setOutputs(outs);
         };
         update(); access.onstatechange = update;
-      }).catch(e => console.error("MIDI Init Error"));
+      }).catch(() => console.error("MIDI Init Error"));
     }
+
+    return () => {
+      mounted = false;
+      if (localAccess) localAccess.onstatechange = null;
+    };
   }, []);
 
   useEffect(() => {

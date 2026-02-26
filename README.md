@@ -76,6 +76,23 @@ Use the **Library** tab to browse through internal patches. You can load your ow
 ### MIDI & Hardware Sync
 Open the **MIDI Configuration** panel to select your input/output devices. Enable **Auto-Sync** to transmit parameter changes to your hardware synthesizer via SysEx in real-time.
 
+## ✅ FM Validation & Quality Workflow
+
+`ddxx7` includes a fixed FM validation pipeline against `dx7-synth-js` (pinned commit) with reproducible case matrices and report generation.
+
+- Prepare reference baseline: `npm run validate:fm:prepare`
+- Render reference + DDXX7 outputs: `npm run validate:fm:render`
+- Run static/audio analysis and aggregate issues: `npm run validate:fm:analyze`
+- Run full workflow: `npm run validate:fm`
+
+Generated artifacts:
+- `validation/out/*` for raw intermediate outputs
+- `validation/reports/<timestamp>/*` for `summary.md`, `issues.json`, `fix_plan.md`
+
+Code quality notes:
+- App runtime uses `AudioWorklet` + WebMIDI paths in React app lifecycle.
+- Legacy unused MIDI adapter file (`services/engine/midi.js`) was removed to reduce dead-code and listener leak risk.
+
 ---
 
 ## 🇰🇷 한국어 요약 (Summary in Korean)

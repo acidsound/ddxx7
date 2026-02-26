@@ -1,0 +1,301 @@
+{
+  "version": 1,
+  "description": "DDXX7 FM validation case matrix (32 cases fixed)",
+  "defaults": {
+    "sampleRate": 44100,
+    "durationSeconds": 2.5,
+    "patchSelection": "firstByAlgorithm",
+    "noteOffSeconds": 2.2
+  },
+  "representativeAlgorithms": [1, 4, 7, 10, 12, 16, 18, 21, 24, 28, 31, 32],
+  "cases": [
+    {
+      "id": "core_alg01",
+      "group": "core",
+      "algorithm": 1,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg04",
+      "group": "core",
+      "algorithm": 4,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg07",
+      "group": "core",
+      "algorithm": 7,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg10",
+      "group": "core",
+      "algorithm": 10,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg12",
+      "group": "core",
+      "algorithm": 12,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg16",
+      "group": "core",
+      "algorithm": 16,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg18",
+      "group": "core",
+      "algorithm": 18,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg21",
+      "group": "core",
+      "algorithm": 21,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg24",
+      "group": "core",
+      "algorithm": 24,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg28",
+      "group": "core",
+      "algorithm": 28,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg31",
+      "group": "core",
+      "algorithm": 31,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "core_alg32",
+      "group": "core",
+      "algorithm": 32,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "ext_alg01_n48_v04",
+      "group": "extended",
+      "algorithm": 1,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg01_n48_v10",
+      "group": "extended",
+      "algorithm": 1,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg01_n72_v04",
+      "group": "extended",
+      "algorithm": 1,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "ext_alg01_n72_v10",
+      "group": "extended",
+      "algorithm": 1,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "ext_alg16_n48_v04",
+      "group": "extended",
+      "algorithm": 16,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg16_n48_v10",
+      "group": "extended",
+      "algorithm": 16,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg16_n72_v04",
+      "group": "extended",
+      "algorithm": 16,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "ext_alg16_n72_v10",
+      "group": "extended",
+      "algorithm": 16,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "ext_alg24_n48_v04",
+      "group": "extended",
+      "algorithm": 24,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg24_n48_v10",
+      "group": "extended",
+      "algorithm": 24,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg24_n72_v04",
+      "group": "extended",
+      "algorithm": 24,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "ext_alg24_n72_v10",
+      "group": "extended",
+      "algorithm": 24,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "ext_alg32_n48_v04",
+      "group": "extended",
+      "algorithm": 32,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg32_n48_v10",
+      "group": "extended",
+      "algorithm": 32,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 48, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 48 } }
+      ]
+    },
+    {
+      "id": "ext_alg32_n72_v04",
+      "group": "extended",
+      "algorithm": 32,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 0.4 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "ext_alg32_n72_v10",
+      "group": "extended",
+      "algorithm": 32,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 72, "velocity": 1.0 } },
+        { "timeSeconds": 2.2, "type": "noteOff", "data": { "note": 72 } }
+      ]
+    },
+    {
+      "id": "rel_alg04_off300ms",
+      "group": "release",
+      "algorithm": 4,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 0.3, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "rel_alg04_off1200ms",
+      "group": "release",
+      "algorithm": 4,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 1.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "rel_alg24_off300ms",
+      "group": "release",
+      "algorithm": 24,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 0.3, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    },
+    {
+      "id": "rel_alg24_off1200ms",
+      "group": "release",
+      "algorithm": 24,
+      "events": [
+        { "timeSeconds": 0.0, "type": "noteOn", "data": { "note": 60, "velocity": 0.8 } },
+        { "timeSeconds": 1.2, "type": "noteOff", "data": { "note": 60 } }
+      ]
+    }
+  ]
+}

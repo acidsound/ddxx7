@@ -196,16 +196,13 @@ class Envelope {
             this.targetlevel = Math.max(0, (ENV_LEVEL_TABLE[newlevel] << 5) - 224);
             this.rising = (this.targetlevel - this.level) > 0;
 
-            // Apply Keyboard Rate Scaling (RS)
-            // DX7: Rate increases as you play higher notes based on keyScaleRate
-            const noteOffset = Math.max(0, this.note - 21); // A-1 corresponds to 0
-            const rBoost = Math.floor(this.keyScaleRate * noteOffset / 8);
-            const effectiveRate = Math.min(99, this.rates[this.state] + rBoost);
+            // Match dx7-synth-js envelope reference behavior: no keyboard rate scaling boost.
+            const effectiveRate = this.rates[this.state];
 
             // Rate calculation using effectiveRate
             const qr = Math.min(63, (effectiveRate * 41) >> 6);
-            // Adjusted divisor: 8192 to significantly slow down decay (4x reference 2048)
-            const divisor = 8192 * (SAMPLE_RATE / 44100);
+            // dx7-synth-js reference divisor
+            const divisor = 2048 * (SAMPLE_RATE / 44100);
             this.decayIncrement = Math.pow(2, qr / 4) / divisor;
         }
     }
@@ -449,73 +446,146 @@ class DX7Processor extends AudioWorkletProcessor {
         this.algorithms = null; // Received via message
         this.counter = 0; // For metering timing
         this.heldNotes = []; // Stack for Mono mode note priority
+        this.scheduledEvents = []; // [{ frame, type, data }]
+        this.scheduledEventIndex = 0;
+        this.globalFrame = 0;
 
         this.port.onmessage = e => {
             const { type, data, algorithms } = e.data;
             if (type === 'init') {
                 this.algorithms = algorithms;
+                return;
             }
-            if (type === 'patch') {
-                this.patch = data;
-                this.lfo = new LFO(this.patch);
-                this.heldNotes = [];
-                this.voices = []; // Clear active voices on patch change
-            }
-            if (type === 'noteOn' && this.patch && this.algorithms) {
-                const algData = this.algorithms[this.patch.algorithm - 1];
-                if (algData) {
-                    if (this.patch.mono) {
-                        // Mono Mode: Note Stack Logic (Last Note Priority with Retrigger)
-                        this.heldNotes = this.heldNotes.filter(n => n.note !== data.note);
-                        this.heldNotes.push({ note: data.note, velocity: data.velocity });
-
-                        this.voices = []; // Retrigger hard
-                        this.voices.push(new Voice(data.note, this.patch, data.velocity, this.lfo, algData));
-                    } else {
-                        // Poly Mode
-                        if (this.voices.length >= 16) this.voices.shift();
-                        if (this.patch.lfoSync) this.lfo?.sync();
-                        this.voices.push(new Voice(data.note, this.patch, data.velocity, this.lfo, algData));
-                    }
-                }
-            }
-            if (type === 'noteOff') {
-                if (this.patch && this.patch.mono) {
-                    // Mono Mode: Remove from stack & Retrigger previous
-                    const prevTop = this.heldNotes.length > 0 ? this.heldNotes[this.heldNotes.length - 1] : null;
-                    this.heldNotes = this.heldNotes.filter(n => n.note !== data.note);
-                    const newTop = this.heldNotes.length > 0 ? this.heldNotes[this.heldNotes.length - 1] : null;
-
-                    if (prevTop && prevTop.note === data.note) {
-                        // We released the currently playing note
-                        if (newTop) {
-                            // Retrigger previous note
-                            this.voices = [];
-                            const algData = this.algorithms[this.patch.algorithm - 1];
-                            if (algData) {
-                                this.voices.push(new Voice(newTop.note, this.patch, newTop.velocity, this.lfo, algData));
-                            }
-                        } else {
-                            // No notes left, release current voice
-                            this.voices.forEach(v => v.noteOff(this.sustain));
-                        }
-                    }
+            if (type === 'scheduleEvents') {
+                this.resetForScheduledPlayback();
+                if (Array.isArray(data)) {
+                    this.scheduledEvents = data
+                        .map(ev => ({
+                            frame: Math.max(0, Number(ev.frame) || 0),
+                            type: ev.type,
+                            data: ev.data || {}
+                        }))
+                        .sort((a, b) => a.frame - b.frame);
                 } else {
-                    // Poly Mode
-                    this.voices.forEach(v => { if (v.note === data.note) v.noteOff(this.sustain); });
+                    this.scheduledEvents = [];
                 }
+                return;
             }
-            if (type === 'panic') { this.voices = []; this.heldNotes = []; this.sustain = false; }
-            if (type === 'pitchBend') this.pitchBend = data;
-            if (type === 'modWheel') this.modWheel = data;
-            if (type === 'aftertouch') this.aftertouch = data;
-            if (type === 'sustain') {
-                this.sustain = data;
-                if (!this.sustain) {
-                    this.voices.forEach(v => v.sustainReleased());
-                }
-            }
+            this.handleIncomingEvent(type, data);
         };
+    }
+
+    resetForScheduledPlayback() {
+        this.voices = [];
+        this.heldNotes = [];
+        this.sustain = false;
+        this.pitchBend = 0;
+        this.modWheel = 0;
+        this.aftertouch = 0;
+        this.counter = 0;
+        this.globalFrame = 0;
+        this.scheduledEvents = [];
+        this.scheduledEventIndex = 0;
+    }
+
+    handleIncomingEvent(type, data) {
+        if (type === 'patch') {
+            this.patch = data;
+            this.lfo = new LFO(this.patch);
+            // Preserve realtime controller state on patch change.
+            this.heldNotes = [];
+            this.voices = [];
+            this.scheduledEvents = [];
+            this.scheduledEventIndex = 0;
+            this.globalFrame = 0;
+            this.counter = 0;
+            return;
+        }
+
+        if (type === 'panic') {
+            this.voices = [];
+            this.heldNotes = [];
+            this.sustain = false;
+            return;
+        }
+
+        if (type === 'pitchBend') {
+            this.pitchBend = Number(data) || 0;
+            return;
+        }
+        if (type === 'modWheel') {
+            this.modWheel = Number(data) || 0;
+            return;
+        }
+        if (type === 'aftertouch') {
+            this.aftertouch = Number(data) || 0;
+            return;
+        }
+        if (type === 'sustain') {
+            this.sustain = !!data;
+            if (!this.sustain) {
+                this.voices.forEach(v => v.sustainReleased());
+            }
+            return;
+        }
+
+        if (!this.patch || !this.algorithms) return;
+        const algData = this.algorithms[this.patch.algorithm - 1];
+        if (!algData) return;
+
+        if (type === 'noteOn') {
+            const note = Number(data?.note);
+            const velocity = Number(data?.velocity);
+            if (!Number.isFinite(note) || !Number.isFinite(velocity)) return;
+
+            if (this.patch.mono) {
+                // Mono Mode: Last-note priority with retrigger.
+                this.heldNotes = this.heldNotes.filter(n => n.note !== note);
+                this.heldNotes.push({ note, velocity });
+                this.voices = [];
+                this.voices.push(new Voice(note, this.patch, velocity, this.lfo, algData));
+            } else {
+                if (this.voices.length >= 16) this.voices.shift();
+                if (this.patch.lfoSync) this.lfo?.sync();
+                this.voices.push(new Voice(note, this.patch, velocity, this.lfo, algData));
+            }
+            return;
+        }
+
+        if (type === 'noteOff') {
+            const note = Number(data?.note);
+            if (!Number.isFinite(note)) return;
+
+            if (this.patch.mono) {
+                const prevTop = this.heldNotes.length > 0 ? this.heldNotes[this.heldNotes.length - 1] : null;
+                this.heldNotes = this.heldNotes.filter(n => n.note !== note);
+                const newTop = this.heldNotes.length > 0 ? this.heldNotes[this.heldNotes.length - 1] : null;
+
+                if (prevTop && prevTop.note === note) {
+                    if (newTop) {
+                        this.voices = [];
+                        this.voices.push(new Voice(newTop.note, this.patch, newTop.velocity, this.lfo, algData));
+                    } else {
+                        this.voices.forEach(v => v.noteOff(this.sustain));
+                    }
+                }
+            } else {
+                this.voices.forEach(v => {
+                    if (v.note === note) v.noteOff(this.sustain);
+                });
+            }
+        }
+    }
+
+    flushScheduledEventsAtFrame(frame) {
+        while (
+            this.scheduledEventIndex < this.scheduledEvents.length &&
+            this.scheduledEvents[this.scheduledEventIndex].frame <= frame
+        ) {
+            const event = this.scheduledEvents[this.scheduledEventIndex];
+            this.handleIncomingEvent(event.type, event.data);
+            this.scheduledEventIndex += 1;
+        }
     }
 
     process(inputs, outputs) {
@@ -534,6 +604,7 @@ class DX7Processor extends AudioWorkletProcessor {
         const ctrlMod = Math.min(1.27, this.modWheel + atEffect);
 
         for (let i = 0; i < outL.length; i++) {
+            this.flushScheduledEventsAtFrame(this.globalFrame);
             let l = 0, r = 0;
 
             const lfoOut = this.lfo ? this.lfo.render(ctrlMod) : { pitchMod: 1, rawMod: 0, combinedADepth: 0 };
@@ -544,6 +615,7 @@ class DX7Processor extends AudioWorkletProcessor {
                 l += vl; r += vr;
             }
             outL[i] = l; outR[i] = r;
+            this.globalFrame += 1;
         }
 
         // Metering: Send operator levels and envelope states every ~46ms (2048 samples)

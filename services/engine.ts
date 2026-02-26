@@ -5,6 +5,7 @@ export class DX7Engine {
   private context: AudioContext;
   private node: AudioWorkletNode | null = null;
   private patchQueue: Patch | null = null;
+  private disposed = false;
 
   constructor(patch: Patch) {
     this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -14,6 +15,7 @@ export class DX7Engine {
 
   private async init() {
     try {
+      if (this.disposed) return;
       if (!this.context.audioWorklet) {
         const msg = "AudioWorklet not supported. Check HTTPS/Secure Context.";
         alert(msg); throw new Error(msg);
@@ -21,6 +23,7 @@ export class DX7Engine {
 
       // Use relative path with cache busting
       await this.context.audioWorklet.addModule(`dx7-processor.js?v=${Date.now()}`);
+      if (this.disposed) return;
 
       this.node = new AudioWorkletNode(this.context, 'dx7-processor', {
         outputChannelCount: [2],
@@ -49,18 +52,46 @@ export class DX7Engine {
     }
   }
 
-  async unlock() { if (this.context.state === 'suspended') await this.context.resume(); }
-  updatePatch(patch: Patch) { this.node?.port.postMessage({ type: 'patch', data: patch }); this.patchQueue = patch; }
-  noteOn(note: number, velocity: number) { this.node?.port.postMessage({ type: 'noteOn', data: { note, velocity } }); }
-  noteOff(note: number) { this.node?.port.postMessage({ type: 'noteOff', data: { note } }); }
-  panic() { this.node?.port.postMessage({ type: 'panic' }); }
+  async unlock() {
+    if (this.disposed) return;
+    if (this.context.state === 'suspended') await this.context.resume();
+  }
+  updatePatch(patch: Patch) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'patch', data: patch });
+    this.patchQueue = patch;
+  }
+  noteOn(note: number, velocity: number) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'noteOn', data: { note, velocity } });
+  }
+  noteOff(note: number) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'noteOff', data: { note } });
+  }
+  panic() {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'panic' });
+  }
 
   private opLevelsHandler: ((levels: Float32Array, envStates?: Int8Array) => void) | null = null;
 
-  setPitchBend(val: number) { this.node?.port.postMessage({ type: 'pitchBend', data: val }); }
-  setModWheel(val: number) { this.node?.port.postMessage({ type: 'modWheel', data: val }); }
-  setAftertouch(val: number) { this.node?.port.postMessage({ type: 'aftertouch', data: val }); }
-  setSustain(val: boolean) { this.node?.port.postMessage({ type: 'sustain', data: val }); }
+  setPitchBend(val: number) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'pitchBend', data: val });
+  }
+  setModWheel(val: number) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'modWheel', data: val });
+  }
+  setAftertouch(val: number) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'aftertouch', data: val });
+  }
+  setSustain(val: boolean) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'sustain', data: val });
+  }
 
   public onOpLevels(callback: (levels: Float32Array, envStates?: Int8Array) => void) {
     this.opLevelsHandler = callback;
@@ -68,4 +99,20 @@ export class DX7Engine {
 
   getContext() { return this.context; }
   getState() { return this.context.state; }
+
+  async dispose() {
+    this.disposed = true;
+    this.patchQueue = null;
+    this.opLevelsHandler = null;
+
+    if (this.node) {
+      this.node.port.onmessage = null;
+      try { this.node.disconnect(); } catch {}
+      this.node = null;
+    }
+
+    if (this.context.state !== 'closed') {
+      await this.context.close();
+    }
+  }
 }

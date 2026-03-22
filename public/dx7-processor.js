@@ -39,6 +39,9 @@ for (let i = 0; i < 100; i++) {
     LEVEL_MAP[i] = Math.floor(Math.max(0, (ENV_LEVEL_TABLE[i] << 5) - 224));
 }
 
+const PER_VOICE_LEVEL = 0.125 / 6;
+const SOFT_LIMIT_THRESHOLD = 0.98;
+
 const LFO_PITCH_SENS_TABLE = [0, 0.0264, 0.0534, 0.0889, 0.1612, 0.2769, 0.4967, 1.0];
 const LFO_FREQUENCY_TABLE = [
     0.062506, 0.124815, 0.311474, 0.435381, 0.619784, 0.744396, 0.930495, 1.116390, 1.284220, 1.496880,
@@ -336,6 +339,7 @@ class Voice {
     render(globalBend, lfoData) {
         // Feedback ratio from dx7-synth-js: Math.pow(2, (fb - 7)) where fb=0-7
         const fbFactor = Math.pow(2, this.patch.feedback - 7);
+        const masterLevel = Math.max(0, Math.min(99, Number(this.patch.masterLevel ?? 80))) / 99;
         const pEnvMod = 1.0 + (this.pitchEnv.render() * 0.1);
         const bendMult = Math.pow(2, (globalBend * 2) / 12);
 
@@ -398,9 +402,10 @@ class Voice {
             finalR += this.opOutputs[c];
         });
 
-        // Per-voice level from dx7-synth-js: 0.125 / 6 (nominal per-voice level)
-        // Reference doesn't scale by carrier count - the output level table already handles that
-        const perVoiceLevel = 0.125 / 6;
+        // Normalize by carrier count so multi-carrier algorithms do not get disproportionately louder,
+        // then apply the user-visible master level control before the final bus mix.
+        const outputScaling = 1 / Math.max(1, this.alg.outputMix.length);
+        const perVoiceLevel = PER_VOICE_LEVEL * outputScaling * masterLevel;
         return [finalL * perVoiceLevel, finalR * perVoiceLevel];
     }
 
@@ -588,6 +593,14 @@ class DX7Processor extends AudioWorkletProcessor {
         }
     }
 
+    softLimit(sample) {
+        const abs = Math.abs(sample);
+        if (abs <= SOFT_LIMIT_THRESHOLD) return sample;
+        const excess = (abs - SOFT_LIMIT_THRESHOLD) / (1 - SOFT_LIMIT_THRESHOLD);
+        const limited = SOFT_LIMIT_THRESHOLD + (1 - SOFT_LIMIT_THRESHOLD) * Math.tanh(excess);
+        return Math.sign(sample) * limited;
+    }
+
     process(inputs, outputs) {
         const outL = outputs[0][0];
         const outR = outputs[0][1];
@@ -614,7 +627,8 @@ class DX7Processor extends AudioWorkletProcessor {
                 const [vl, vr] = v.render(this.pitchBend, lfoOut);
                 l += vl; r += vr;
             }
-            outL[i] = l; outR[i] = r;
+            outL[i] = this.softLimit(l);
+            outR[i] = this.softLimit(r);
             this.globalFrame += 1;
         }
 

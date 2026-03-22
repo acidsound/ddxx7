@@ -55,7 +55,7 @@ export default function GlobalControlsPanel({ patch, onChange }: GlobalControlsP
           <div className="flex flex-col items-center gap-1">
             <ToggleSwitch label="LFO Sync" active={patch.lfoSync} onChange={v => onChange({ lfoSync: v })} />
           </div>
-          <div /> {/* Empty middle column */}
+          <ControlKnob label="Reverb" min={0} max={99} value={patch.reverbDepth} onChange={v => onChange({ reverbDepth: v })} size={28} />
           <div className="flex flex-col items-center gap-1">
             <ToggleSwitch label="OSC Sync" active={patch.oscKeySync} onChange={v => onChange({ oscKeySync: v })} />
           </div>

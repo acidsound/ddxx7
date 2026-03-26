@@ -61,8 +61,8 @@ export class DX7Engine {
         alert(msg); throw new Error(msg);
       }
 
-      // Use relative path with cache busting
-      await this.context.audioWorklet.addModule(`dx7-processor.js?v=${Date.now()}`);
+      const workletUrl = new URL(`dx7-processor.js?v=${Date.now()}`, document.baseURI).toString();
+      await this.context.audioWorklet.addModule(workletUrl);
       if (this.disposed) return;
 
       this.node = new AudioWorkletNode(this.context, 'dx7-processor', {

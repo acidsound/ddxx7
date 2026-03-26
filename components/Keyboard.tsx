@@ -5,6 +5,8 @@ interface KeyboardProps {
   onNoteOff: (note: number) => void;
   velocity: number;
   onVelocityChange: (vel: number) => void;
+  externalActiveNotes?: Record<number, number>;
+  externalFocusNote?: number | null;
 }
 
 const KEY_TO_NOTE: Record<string, number> = {
@@ -14,11 +16,21 @@ const KEY_TO_NOTE: Record<string, number> = {
   'y': 21, '7': 22, 'u': 23, 'i': 24, '9': 25, 'o': 26, '0': 27, 'p': 28
 };
 
-const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVelocityChange }) => {
+const clampOctave = (value: number) => Math.max(0, Math.min(8, value));
+
+const Keyboard: React.FC<KeyboardProps> = ({
+  onNoteOn,
+  onNoteOff,
+  velocity,
+  onVelocityChange,
+  externalActiveNotes = {},
+  externalFocusNote = null,
+}) => {
   const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
   const [octave, setOctave] = useState(4);
   const [isExpanded, setIsExpanded] = useState(true);
   const activeNotesRef = useRef<Set<number>>(new Set());
+  const triggeredNotesRef = useRef<Map<number, number>>(new Map());
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -28,17 +40,30 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const keyCount = isMobile ? 18 : 28;
+  const keys = Array.from({ length: keyCount }, (_, i) => i);
+
+  useEffect(() => {
+    if (externalFocusNote === null) return;
+    const visibleStart = (octave + 2) * 12;
+    const visibleEnd = visibleStart + keyCount - 1;
+    if (externalFocusNote >= visibleStart && externalFocusNote <= visibleEnd) return;
+    setOctave(clampOctave(Math.floor(externalFocusNote / 12) - 2));
+  }, [externalFocusNote, keyCount, octave]);
+
   const handleNoteOn = useCallback((note: number) => {
     const finalNote = note + ((octave + 2) * 12);
     if (activeNotesRef.current.has(finalNote)) return;
+    triggeredNotesRef.current.set(note, finalNote);
     activeNotesRef.current.add(finalNote);
     setActiveNotes(new Set(activeNotesRef.current));
     onNoteOn(finalNote);
   }, [onNoteOn, octave]);
 
   const handleNoteOff = useCallback((note: number) => {
-    const finalNote = note + ((octave + 2) * 12);
+    const finalNote = triggeredNotesRef.current.get(note) ?? (note + ((octave + 2) * 12));
     if (!activeNotesRef.current.has(finalNote)) return;
+    triggeredNotesRef.current.delete(note);
     activeNotesRef.current.delete(finalNote);
     setActiveNotes(new Set(activeNotesRef.current));
     onNoteOff(finalNote);
@@ -161,11 +186,13 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
     return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); };
   }, [handleNoteOn, handleNoteOff]);
 
-  const keyCount = isMobile ? 18 : 28;
-  const keys = Array.from({ length: keyCount }, (_, i) => i);
-
   const isBlackKey = (n: number) => [1, 3, 6, 8, 10, 13, 15, 18, 20, 22, 25, 27].includes(n % 12);
   const getNoteName = (n: number) => ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'][n % 12];
+  const getVelocityBrightness = (midiVelocity?: number) => {
+    if (midiVelocity === undefined) return undefined;
+    const normalized = Math.max(0, Math.min(127, midiVelocity)) / 127;
+    return 1 + (1 - normalized);
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-[#333] select-none z-[200] pb-2 flex flex-col">
@@ -204,12 +231,15 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
         {keys.map((n) => {
           if (isBlackKey(n)) return null;
           const finalNote = n + ((octave + 2) * 12);
-          const active = activeNotes.has(finalNote);
+          const midiVelocity = externalActiveNotes[finalNote];
+          const active = activeNotes.has(finalNote) || midiVelocity !== undefined;
+          const brightness = getVelocityBrightness(midiVelocity);
           return (
             <div
               key={n}
               data-note={finalNote}
               className={`flex-grow border-r border-black/10 relative cursor-pointer ${active ? 'bg-dx7-teal' : 'bg-white hover:bg-gray-100'}`}
+              style={brightness ? { filter: `brightness(${brightness})` } : undefined}
               onPointerDown={(e) => onKeyPointerDown(e, n)}
               onPointerEnter={(e) => onKeyPointerEnter(e, n)}
               onPointerLeave={(e) => onKeyPointerLeave(e, n)}
@@ -224,12 +254,15 @@ const Keyboard: React.FC<KeyboardProps> = ({ onNoteOn, onNoteOff, velocity, onVe
           {keys.map((n) => {
             if (!isBlackKey(n)) return <div key={n} className="flex-grow" />;
             const finalNote = n + ((octave + 2) * 12);
-            const active = activeNotes.has(finalNote);
+            const midiVelocity = externalActiveNotes[finalNote];
+            const active = activeNotes.has(finalNote) || midiVelocity !== undefined;
+            const brightness = getVelocityBrightness(midiVelocity);
             return (
               <div key={n} className="relative z-10" style={{ width: '0%', flexBasis: '0%' }}>
                 <div
                   data-note={finalNote}
                   className={`absolute top-0 -left-[14px] md:-left-[18px] w-[28px] md:w-[36px] h-[60%] border border-black rounded-b shadow-lg pointer-events-auto transition-all ${active ? 'bg-dx7-teal' : 'bg-gradient-to-b from-[#111] to-[#333]'}`}
+                  style={brightness ? { filter: `brightness(${brightness})` } : undefined}
                   onPointerDown={(e) => { e.stopPropagation(); onKeyPointerDown(e, n); }}
                   onPointerEnter={(e) => { e.stopPropagation(); onKeyPointerEnter(e, n); }}
                   onPointerLeave={(e) => { e.stopPropagation(); onKeyPointerLeave(e, n); }}

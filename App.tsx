@@ -79,6 +79,8 @@ const App: React.FC = () => {
   const [isReceivingFromHW, setIsReceivingFromHW] = useState(false);
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   const [isAudioSuspended, setIsAudioSuspended] = useState(false);
+  const [midiActiveNotes, setMidiActiveNotes] = useState<Record<number, number>>({});
+  const [midiFocusNote, setMidiFocusNote] = useState<number | null>(null);
 
   const engineRef = useRef<DX7Engine | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,6 +156,8 @@ const App: React.FC = () => {
 
   const handlePanic = () => {
     engineRef.current?.panic();
+    setMidiActiveNotes({});
+    setMidiFocusNote(null);
     if (midiAccess && selectedOutput) {
       const out = midiAccess.outputs.get(selectedOutput);
       if (out) out.send([0xB0, 123, 0]);
@@ -250,8 +254,16 @@ const App: React.FC = () => {
 
       if (status === 0x90 && data2 > 0) {
         engineRef.current?.noteOn(data1, data2 / 127);
+        setMidiActiveNotes(prev => ({ ...prev, [data1]: data2 }));
+        setMidiFocusNote(data1);
       } else if (status === 0x80 || (status === 0x90 && data2 === 0)) {
         engineRef.current?.noteOff(data1);
+        setMidiActiveNotes(prev => {
+          if (prev[data1] === undefined) return prev;
+          const next = { ...prev };
+          delete next[data1];
+          return next;
+        });
       } else if (status === 0xB0) {
         // Control Change
         if (data1 === 1) { // Modulation Wheel
@@ -273,7 +285,11 @@ const App: React.FC = () => {
       const i = midiAccess.inputs.get(id);
       if (i) { i.onmidimessage = onMsg; handlers.push(i); }
     });
-    return () => handlers.forEach(h => h.onmidimessage = null);
+    return () => {
+      handlers.forEach(h => h.onmidimessage = null);
+      setMidiActiveNotes({});
+      setMidiFocusNote(null);
+    };
   }, [midiAccess, selectedInputs, updatePatch]);
 
   const handlePatchSwitch = useCallback((idx: number) => {
@@ -565,7 +581,14 @@ const App: React.FC = () => {
       </div>
 
       {isAudioUnlocked && (
-        <Keyboard velocity={manualVelocity} onVelocityChange={setManualVelocity} onNoteOn={n => engineRef.current?.noteOn(n, manualVelocity / 127)} onNoteOff={n => engineRef.current?.noteOff(n)} />
+        <Keyboard
+          velocity={manualVelocity}
+          onVelocityChange={setManualVelocity}
+          onNoteOn={n => engineRef.current?.noteOn(n, manualVelocity / 127)}
+          onNoteOff={n => engineRef.current?.noteOff(n)}
+          externalActiveNotes={midiActiveNotes}
+          externalFocusNote={midiFocusNote}
+        />
       )}
 
       <style>{`

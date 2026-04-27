@@ -1,19 +1,21 @@
-import { Patch } from '../types';
+import { GlobalFxState, Patch } from '../types';
 import { ALGORITHMS } from './algorithms';
 
 export class DX7Engine {
   private context: AudioContext;
   private node: AudioWorkletNode | null = null;
   private patchQueue: Patch | null = null;
+  private globalFxQueue: GlobalFxState | null = null;
   private disposed = false;
   private dryGain: GainNode | null = null;
   private reverbSendGain: GainNode | null = null;
   private reverbWetGain: GainNode | null = null;
   private convolver: ConvolverNode | null = null;
 
-  constructor(patch: Patch) {
+  constructor(patch: Patch, globalFx?: GlobalFxState) {
     this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
     this.patchQueue = patch;
+    this.globalFxQueue = globalFx ?? null;
     this.init();
   }
 
@@ -98,6 +100,11 @@ export class DX7Engine {
         this.node.port.postMessage({ type: 'patch', data: this.patchQueue });
         this.patchQueue = null;
       }
+
+      if (this.globalFxQueue) {
+        this.node.port.postMessage({ type: 'globalFx', data: this.globalFxQueue });
+        this.globalFxQueue = null;
+      }
     } catch (e: any) {
       console.error("AudioWorklet Load Error", e);
       alert("Audio Init Error: " + (e.message || e));
@@ -113,6 +120,11 @@ export class DX7Engine {
     this.updateFxFromPatch(patch);
     this.node?.port.postMessage({ type: 'patch', data: patch });
     this.patchQueue = patch;
+  }
+  updateGlobalFx(globalFx: GlobalFxState) {
+    if (this.disposed) return;
+    this.node?.port.postMessage({ type: 'globalFx', data: globalFx });
+    this.globalFxQueue = globalFx;
   }
   noteOn(note: number, velocity: number) {
     if (this.disposed) return;
@@ -156,6 +168,7 @@ export class DX7Engine {
   async dispose() {
     this.disposed = true;
     this.patchQueue = null;
+    this.globalFxQueue = null;
     this.opLevelsHandler = null;
 
     if (this.node) {

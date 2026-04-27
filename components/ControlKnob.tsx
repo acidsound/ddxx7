@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface KnobProps {
   label: string;
@@ -12,18 +13,33 @@ interface KnobProps {
 
 export default function ControlKnob({ label, value, min, max, onChange, size = 38, displayValue }: KnobProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ left: 0, top: 0 });
+  const knobRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const startVal = useRef(0);
 
+  const updatePopoverPosition = () => {
+    const rect = knobRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const viewportPadding = 32;
+    const centeredLeft = rect.left + rect.width / 2;
+    setPopoverPosition({
+      left: Math.max(viewportPadding, Math.min(window.innerWidth - viewportPadding, centeredLeft)),
+      top: Math.max(28, rect.top - 8),
+    });
+  };
+
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
+    updatePopoverPosition();
     startY.current = e.clientY;
     startVal.current = value;
-    (e.target as Element).setPointerCapture(e.pointerId);
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
+    updatePopoverPosition();
     const deltaY = startY.current - e.clientY;
     const range = max - min;
     const sensitivity = 0.4;
@@ -40,14 +56,23 @@ export default function ControlKnob({ label, value, min, max, onChange, size = 3
     ? displayValue(value)
     : displayValue ?? value;
 
+  const valuePopover = isDragging && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          className="fixed -translate-x-1/2 -translate-y-full bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-teal font-mono text-[9px] px-1.5 py-0.5 rounded shadow-lg z-[9999] whitespace-nowrap pointer-events-none"
+          style={{ left: popoverPosition.left, top: popoverPosition.top }}
+        >
+          {formattedValue}
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div className="flex flex-col items-center gap-1 group relative">
-      {isDragging && (
-        <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-[#050a09]/95 border border-dx7-teal/50 text-dx7-teal font-mono text-[9px] px-1.5 py-0.5 rounded shadow-lg z-300 whitespace-nowrap">
-          {formattedValue}
-        </div>
-      )}
+      {valuePopover}
       <div
+        ref={knobRef}
         className="relative cursor-ns-resize touch-none"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Patch, MidiDevice } from './types';
+import { Patch, MidiDevice, GlobalFxState } from './types';
 import { PRESETS } from './services/presets';
 import { DX7Engine } from './services/engine';
 import { SysExHandler } from './services/sysex';
 import Keyboard from './components/Keyboard';
 import OperatorPanel from './components/OperatorPanel';
 import GlobalControlsPanel from './components/GlobalControlsPanel';
+import GlobalFxPanel from './components/GlobalFxPanel';
 import AlgorithmMatrix from './components/AlgorithmMatrix';
 import PitchEnvelopePanel from './components/PitchEnvelopePanel';
 import ControlKnob from './components/ControlKnob';
+
+const DEFAULT_GLOBAL_FX: GlobalFxState = {
+  delayTime: 45,
+  delayFeedback: 0,
+};
 
 const FileImporter = React.memo(({ onFilesSelected, inputRef }: { onFilesSelected: (patches: Patch[]) => void, inputRef: React.RefObject<HTMLInputElement> }) => {
   return (
@@ -36,6 +42,7 @@ const FileImporter = React.memo(({ onFilesSelected, inputRef }: { onFilesSelecte
 
 const App: React.FC = () => {
   const [patch, setPatch] = useState<Patch>(PRESETS[0]);
+  const [globalFx, setGlobalFx] = useState<GlobalFxState>(DEFAULT_GLOBAL_FX);
   const [library, setLibrary] = useState<Patch[]>(PRESETS);
   const [currentPatchIndex, setCurrentPatchIndex] = useState(0);
   const [midiAccess, setMidiAccess] = useState<MIDIAccess | null>(null);
@@ -91,7 +98,7 @@ const App: React.FC = () => {
   const [opStates, setOpStates] = useState<Int8Array>(new Int8Array(6).fill(4));
 
   useEffect(() => {
-    const engine = new DX7Engine(PRESETS[0]);
+    const engine = new DX7Engine(PRESETS[0], DEFAULT_GLOBAL_FX);
     engineRef.current = engine;
     engine.onOpLevels((levels, states) => {
       setOpLevels(levels);
@@ -110,6 +117,14 @@ const App: React.FC = () => {
       engineRef.current = null;
       void engine.dispose().catch(err => console.error('Audio dispose failed', err));
     };
+  }, []);
+
+  const updateGlobalFx = useCallback((changes: Partial<GlobalFxState>) => {
+    setGlobalFx(prev => {
+      const next = { ...prev, ...changes };
+      engineRef.current?.updateGlobalFx(next);
+      return next;
+    });
   }, []);
 
   // iOS Safari Background Resume Handler
@@ -444,11 +459,12 @@ const App: React.FC = () => {
       </header>
 
       {/* pb-32 on small, pb-48 on medium to match keyboard height, no pb on lg to fit screen */}
-      <main className="flex-grow overflow-y-auto lg:overflow-hidden bg-[#0a0a0a] flex flex-col gap-6 md:gap-6 lg:gap-0 pt-4 md:pt-6 lg:pt-0 pb-40 md:pb-56 lg:pb-0 custom-scrollbar">
+      <main className="flex-grow overflow-y-auto lg:overflow-hidden bg-[#0a0a0a] flex flex-col gap-6 md:gap-6 lg:gap-0 pt-0 pb-40 md:pb-56 lg:pb-0 custom-scrollbar">
         {activeViewVal === 'edit' ? (
           <div className="w-full flex-grow flex flex-col lg:flex-row lg:pb-[209px] lg:overflow-hidden bg-[#0a0a0a]">
             {/* Left Column: Global Settings (Voice, Algorithm, Tone, Pitch Env) */}
             <div className="w-full lg:w-[55%] flex flex-col lg:overflow-y-auto custom-scrollbar lg:border-b border-white/10">
+              <GlobalFxPanel value={globalFx} onChange={updateGlobalFx} />
               <div className="bg-[#0f0f0f] border-b border-[#222] px-6 py-2 flex justify-between items-center lg:sticky lg:top-0 lg:z-20">
                 <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em]">Patch info</h4>
               </div>

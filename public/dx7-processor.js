@@ -438,11 +438,236 @@ class Voice {
     }
 }
 
+class OnePoleLowPass {
+    constructor(sampleRate, cutoffHz) {
+        this.sampleRate = sampleRate;
+        this.z = 0;
+        this.a = 0;
+        this.setCutoff(cutoffHz);
+    }
+
+    setSampleRate(sampleRate) {
+        this.sampleRate = sampleRate;
+    }
+
+    setCutoff(cutoffHz) {
+        const nyquist = this.sampleRate * 0.5;
+        const hz = Math.max(20, Math.min(nyquist * 0.45, cutoffHz));
+        this.a = 1 - Math.exp((-2 * Math.PI * hz) / this.sampleRate);
+    }
+
+    process(input) {
+        this.z += this.a * (input - this.z);
+        return this.z;
+    }
+
+    reset() {
+        this.z = 0;
+    }
+}
+
+class DcBlocker {
+    constructor(coefficient = 0.995) {
+        this.r = coefficient;
+        this.x1 = 0;
+        this.y1 = 0;
+    }
+
+    process(input) {
+        const y = input - this.x1 + this.r * this.y1;
+        this.x1 = input;
+        this.y1 = y;
+        return y;
+    }
+
+    reset() {
+        this.x1 = 0;
+        this.y1 = 0;
+    }
+}
+
+class MonotronDelay {
+    constructor(sampleRate) {
+        this.sampleRate = sampleRate;
+        this.delayTime = 45;
+        this.delayFeedback = 0;
+        this.currentDelaySamples = this.delayMsForKnob(this.delayTime) * this.sampleRate / 1000;
+        this.targetDelaySamples = this.currentDelaySamples;
+        this.writeIndex = 0;
+        this.feedbackSample = 0;
+        this.noiseSeed = 0x12345678;
+        this.jitter = 0;
+        this.jitterTarget = 0;
+        this.controlCounter = 0;
+        this.allocateBuffer();
+
+        this.inputHp = new DcBlocker(0.995);
+        this.outputHp = new DcBlocker(0.998);
+        this.preLp = new OnePoleLowPass(sampleRate, 5200);
+        this.postLpA = new OnePoleLowPass(sampleRate, 4200);
+        this.postLpB = new OnePoleLowPass(sampleRate, 3200);
+        this.feedbackLp = new OnePoleLowPass(sampleRate, 2600);
+        this.updateDerivedParams();
+    }
+
+    allocateBuffer() {
+        this.maxDelaySamples = Math.ceil(this.sampleRate * 1.25) + 8;
+        this.buffer = new Float32Array(this.maxDelaySamples);
+        this.writeIndex = Math.min(this.writeIndex, this.maxDelaySamples - 1);
+    }
+
+    setSampleRate(sampleRate) {
+        if (this.sampleRate === sampleRate) return;
+        this.sampleRate = sampleRate;
+        this.allocateBuffer();
+        this.currentDelaySamples = this.delayMsForKnob(this.delayTime) * this.sampleRate / 1000;
+        this.targetDelaySamples = this.currentDelaySamples;
+        this.preLp.setSampleRate(sampleRate);
+        this.postLpA.setSampleRate(sampleRate);
+        this.postLpB.setSampleRate(sampleRate);
+        this.feedbackLp.setSampleRate(sampleRate);
+        this.updateDerivedParams();
+    }
+
+    setParams(params) {
+        if (!params) return;
+        const previousFeedback = this.delayFeedback;
+        this.delayTime = Math.max(0, Math.min(99, Number(params.delayTime ?? this.delayTime)));
+        this.delayFeedback = Math.max(0, Math.min(99, Number(params.delayFeedback ?? this.delayFeedback)));
+        this.targetDelaySamples = this.delayMsForKnob(this.delayTime) * this.sampleRate / 1000;
+        if (previousFeedback > 0 && this.delayFeedback <= 0) {
+            this.reset();
+        }
+        this.updateDerivedParams();
+    }
+
+    delayMsForKnob(value) {
+        const x = Math.max(0, Math.min(1, value / 99));
+        const resistanceK = 0.5 + Math.pow(x, 2.1) * 100.5;
+        const table = [
+            [0.5, 31.3], [0.723, 36.6], [1.08, 40.6], [1.28, 43.0],
+            [1.47, 45.8], [1.67, 48.1], [2.0, 52.3], [2.4, 56.6],
+            [2.8, 61.6], [3.4, 68.1], [4.0, 75.9], [4.5, 81.0],
+            [4.9, 86.3], [5.4, 92.2], [5.8, 97.1], [6.4, 104.3],
+            [7.2, 113.7], [8.2, 124.1], [9.2, 136.6], [10.5, 151.0],
+            [12.1, 171.0], [14.3, 196.0], [17.2, 228.0], [21.3, 273.0],
+            [27.6, 342.0]
+        ];
+
+        if (resistanceK <= table[0][0]) return table[0][1];
+        for (let i = 1; i < table.length; i++) {
+            const [r0, t0] = table[i - 1];
+            const [r1, t1] = table[i];
+            if (resistanceK <= r1) {
+                const mix = (resistanceK - r0) / (r1 - r0);
+                return t0 + (t1 - t0) * mix;
+            }
+        }
+
+        const extended = (resistanceK - 27.6) / (101 - 27.6);
+        return 342 + Math.pow(Math.max(0, Math.min(1, extended)), 0.78) * 608;
+    }
+
+    updateDerivedParams() {
+        const delayMs = this.targetDelaySamples * 1000 / this.sampleRate;
+        const normTime = Math.max(0, Math.min(1, (delayMs - 31.3) / (950 - 31.3)));
+        const amount = Math.max(0, Math.min(1, this.delayFeedback / 99));
+
+        this.amount = amount;
+        this.feedbackGain = amount * (0.54 + 0.64 * amount);
+        this.wetMix = amount * (0.12 + 0.5 * amount);
+        this.inputDrive = 1.15 + amount * 0.95;
+        this.noiseGain = amount * (0.000015 + normTime * normTime * 0.0012);
+        this.jitterDepth = amount * (0.15 + normTime * 5.5);
+        this.quantScale = Math.pow(2, 14 - normTime * 4.5);
+
+        this.preLp.setCutoff(6200 - normTime * 3500);
+        this.postLpA.setCutoff(5200 - normTime * 4000);
+        this.postLpB.setCutoff(3600 - normTime * 2450);
+        this.feedbackLp.setCutoff(3100 - normTime * 2150);
+    }
+
+    nextNoise() {
+        this.noiseSeed = (1664525 * this.noiseSeed + 1013904223) >>> 0;
+        return (this.noiseSeed / 0x80000000) - 1;
+    }
+
+    readDelay(delaySamples) {
+        let readPos = this.writeIndex - delaySamples;
+        while (readPos < 0) readPos += this.maxDelaySamples;
+        const i0 = Math.floor(readPos) % this.maxDelaySamples;
+        const i1 = (i0 + 1) % this.maxDelaySamples;
+        const frac = readPos - Math.floor(readPos);
+        return this.buffer[i0] + (this.buffer[i1] - this.buffer[i0]) * frac;
+    }
+
+    softClip(input, drive) {
+        return Math.tanh(input * drive) / drive;
+    }
+
+    reset() {
+        this.buffer.fill(0);
+        this.writeIndex = 0;
+        this.feedbackSample = 0;
+        this.inputHp.reset();
+        this.outputHp.reset();
+        this.preLp.reset();
+        this.postLpA.reset();
+        this.postLpB.reset();
+        this.feedbackLp.reset();
+    }
+
+    render(left, right) {
+        const mono = (left + right) * 0.5;
+
+        if (this.amount <= 0.0001) {
+            this.feedbackSample = 0;
+            this.buffer[this.writeIndex] = 0;
+            this.writeIndex = (this.writeIndex + 1) % this.maxDelaySamples;
+            return [left, right];
+        }
+
+        this.controlCounter += 1;
+        if ((this.controlCounter & 31) === 0) {
+            this.updateDerivedParams();
+        }
+        if ((this.controlCounter & 511) === 0) {
+            this.jitterTarget = this.nextNoise() * this.jitterDepth;
+        }
+
+        this.currentDelaySamples += (this.targetDelaySamples - this.currentDelaySamples) * 0.0009;
+        this.jitter += (this.jitterTarget - this.jitter) * 0.00012;
+
+        const delayedRaw = this.readDelay(
+            Math.max(1, Math.min(this.maxDelaySamples - 4, this.currentDelaySamples + this.jitter))
+        );
+
+        const noise = this.nextNoise() * this.noiseGain;
+        let delayReturn = this.postLpA.process(delayedRaw + noise);
+        delayReturn = this.postLpB.process(delayReturn);
+        delayReturn = this.outputHp.process(delayReturn);
+        delayReturn = this.softClip(delayReturn, 1.65);
+
+        const feedback = this.feedbackLp.process(this.feedbackSample) * this.feedbackGain;
+        let writeSample = this.inputHp.process(mono) + feedback;
+        writeSample = this.preLp.process(this.softClip(writeSample, this.inputDrive));
+        writeSample = Math.round(writeSample * this.quantScale) / this.quantScale;
+        this.buffer[this.writeIndex] = this.softClip(writeSample, 1.35);
+        this.writeIndex = (this.writeIndex + 1) % this.maxDelaySamples;
+
+        this.feedbackSample = delayReturn;
+        const wet = this.softClip(delayReturn * this.wetMix, 1.4);
+        return [left + wet, right + wet];
+    }
+}
+
 class DX7Processor extends AudioWorkletProcessor {
     constructor() {
         super();
         this.voices = [];
         this.patch = null;
+        this.globalFx = { delayTime: 45, delayFeedback: 0 };
+        this.monotronDelay = new MonotronDelay(SAMPLE_RATE);
         this.pitchBend = 0;
         this.modWheel = 0;
         this.aftertouch = 0;
@@ -476,6 +701,14 @@ class DX7Processor extends AudioWorkletProcessor {
                 }
                 return;
             }
+            if (type === 'globalFx') {
+                this.globalFx = {
+                    delayTime: Math.max(0, Math.min(99, Number(data?.delayTime ?? this.globalFx.delayTime))),
+                    delayFeedback: Math.max(0, Math.min(99, Number(data?.delayFeedback ?? this.globalFx.delayFeedback)))
+                };
+                this.monotronDelay.setParams(this.globalFx);
+                return;
+            }
             this.handleIncomingEvent(type, data);
         };
     }
@@ -491,6 +724,7 @@ class DX7Processor extends AudioWorkletProcessor {
         this.globalFrame = 0;
         this.scheduledEvents = [];
         this.scheduledEventIndex = 0;
+        this.monotronDelay.reset();
     }
 
     handleIncomingEvent(type, data) {
@@ -610,6 +844,7 @@ class DX7Processor extends AudioWorkletProcessor {
         // Update global SAMPLE_RATE from AudioWorkletProcessor
         if (SAMPLE_RATE !== sampleRate) {
             SAMPLE_RATE = sampleRate;
+            this.monotronDelay.setSampleRate(SAMPLE_RATE);
             console.log('DX7 Processor running at', SAMPLE_RATE, 'Hz');
         }
 
@@ -627,6 +862,7 @@ class DX7Processor extends AudioWorkletProcessor {
                 const [vl, vr] = v.render(this.pitchBend, lfoOut);
                 l += vl; r += vr;
             }
+            [l, r] = this.monotronDelay.render(l, r);
             outL[i] = this.softLimit(l);
             outR[i] = this.softLimit(r);
             this.globalFrame += 1;

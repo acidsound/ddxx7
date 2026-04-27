@@ -47,6 +47,11 @@ export interface Patch {
   reverbDepth: number;
 }
 
+export interface GlobalFxState {
+  delayTime: number;
+  delayFeedback: number;
+}
+
 export interface MidiDevice {
   id: string;
   name: string;

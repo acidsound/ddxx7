@@ -96,16 +96,51 @@ const App: React.FC = () => {
   const receiveTimerRef = useRef<number | null>(null);
   const [opLevels, setOpLevels] = useState<Float32Array>(new Float32Array(6));
   const [opStates, setOpStates] = useState<Int8Array>(new Int8Array(6).fill(4));
+  const pendingMeterLevelsRef = useRef<Float32Array | null>(null);
+  const pendingMeterStatesRef = useRef<Int8Array | null>(null);
+  const meterFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     const engine = new DX7Engine(PRESETS[0], DEFAULT_GLOBAL_FX);
     engineRef.current = engine;
     engine.onOpLevels((levels, states) => {
-      setOpLevels(levels);
-      if (states) setOpStates(states);
+      pendingMeterLevelsRef.current = levels;
+      if (states) pendingMeterStatesRef.current = states;
+      if (meterFrameRef.current !== null) return;
+      meterFrameRef.current = window.requestAnimationFrame(() => {
+        meterFrameRef.current = null;
+
+        const nextLevels = pendingMeterLevelsRef.current;
+        const nextStates = pendingMeterStatesRef.current;
+        if (!nextLevels) return;
+
+        setOpLevels(prev => {
+          for (let i = 0; i < 6; i++) {
+            if (Math.abs(prev[i] - nextLevels[i]) > 0.003) {
+              return new Float32Array(nextLevels);
+            }
+          }
+          return prev;
+        });
+
+        if (nextStates) {
+          setOpStates(prev => {
+            for (let i = 0; i < 6; i++) {
+              if (prev[i] !== nextStates[i]) {
+                return new Int8Array(nextStates);
+              }
+            }
+            return prev;
+          });
+        }
+      });
     });
 
     return () => {
+      if (meterFrameRef.current !== null) {
+        window.cancelAnimationFrame(meterFrameRef.current);
+        meterFrameRef.current = null;
+      }
       if (sendTimerRef.current !== null) {
         window.clearTimeout(sendTimerRef.current);
         sendTimerRef.current = null;
@@ -158,7 +193,7 @@ const App: React.FC = () => {
           setLibrary(patches);
           setPatch(patches[0]);
           setCurrentPatchIndex(0);
-          engineRef.current?.updatePatch(patches[0]);
+          engineRef.current?.updatePatch(patches[0], { resetVoices: true });
           setCurrentRom(romName);
         }
       })
@@ -241,7 +276,7 @@ const App: React.FC = () => {
           setInputs(ins); setOutputs(outs);
         };
         update(); access.onstatechange = update;
-      }).catch(() => console.error("MIDI Init Error"));
+      }).catch(err => console.warn("MIDI unavailable", err));
     }
 
     return () => {
@@ -312,7 +347,7 @@ const App: React.FC = () => {
     const nextPatch = library[idx];
     setPatch(nextPatch);
     setCurrentPatchIndex(idx);
-    engineRef.current?.updatePatch(nextPatch);
+    engineRef.current?.updatePatch(nextPatch, { resetVoices: true });
     if (isAutoSyncEnabled) handleSendToHW(nextPatch);
   }, [library, isAutoSyncEnabled, handleSendToHW]);
 
@@ -336,7 +371,7 @@ const App: React.FC = () => {
     setLibrary(patches);
     setPatch(patches[0]);
     setCurrentPatchIndex(0);
-    engineRef.current?.updatePatch(patches[0]);
+    engineRef.current?.updatePatch(patches[0], { resetVoices: true });
   }, []);
 
   const handleDownloadPatch = useCallback(() => {
@@ -542,7 +577,7 @@ const App: React.FC = () => {
                   <button key={idx} onClick={() => {
                     setPatch(p);
                     setCurrentPatchIndex(idx);
-                    engineRef.current?.updatePatch(p);
+                    engineRef.current?.updatePatch(p, { resetVoices: true });
                     if (isAutoSyncEnabled) handleSendToHW(p);
                     setActiveViewVal('edit');
                   }} className={`p-4 text-left font-mono text-[10px] rounded border transition-all active:scale-95 ${patch.name === p.name ? 'bg-black text-dx7-teal border-dx7-teal shadow-[0_0_20px_rgba(0,212,193,0.25)]' : 'bg-[#111] text-gray-300 border-white/10 hover:border-dx7-teal/40 hover:text-white'}`}>
@@ -558,42 +593,44 @@ const App: React.FC = () => {
 
       {/* MIDI Configuration Panel */}
       <div className={`fixed bottom-0 left-0 right-0 bg-black border-t border-dx7-teal/30 z-[250] transition-all duration-300 ease-in-out overflow-hidden shadow-[0_-20px_60px_rgba(0,0,0,0.9)] ${isMidiPanelOpen ? 'h-[176px] md:h-[232px] opacity-100' : 'h-0 opacity-0'}`}>
-        <div className="p-4 h-full flex flex-col max-w-4xl mx-auto gap-3">
-          <div className="flex justify-between items-center">
-            <h3 className="text-dx7-teal font-orbitron font-bold text-[10px] uppercase tracking-[0.4em]">MIDI CONFIGURATION</h3>
-            <button onClick={() => setIsMidiPanelOpen(false)} className="text-gray-400 hover:text-white transition-colors text-[9px] font-bold uppercase tracking-widest">CLOSE</button>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">INPUTS</span>
-              <select
-                className="bg-[#111] border border-[#333] p-2 text-[11px] rounded text-dx7-teal outline-none focus:border-dx7-teal/50 transition-colors cursor-pointer"
-                value={Array.from(selectedInputs)[0] || ""}
-                onChange={(e) => setSelectedInputs(e.target.value ? new Set([e.target.value]) : new Set())}
-              >
-                <option value="">No MIDI input selected</option>
-                {inputs.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-              </select>
+        {isMidiPanelOpen && (
+          <div className="p-4 h-full flex flex-col max-w-4xl mx-auto gap-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-dx7-teal font-orbitron font-bold text-[10px] uppercase tracking-[0.4em]">MIDI CONFIGURATION</h3>
+              <button onClick={() => setIsMidiPanelOpen(false)} className="text-gray-400 hover:text-white transition-colors text-[9px] font-bold uppercase tracking-widest">CLOSE</button>
             </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">TRANSMIT TARGET</span>
-              <select
-                className="bg-[#111] border border-[#333] p-2 text-[11px] rounded text-dx7-teal outline-none focus:border-dx7-teal/50 transition-colors cursor-pointer"
-                value={selectedOutput}
-                onChange={(e) => setSelectedOutput(e.target.value)}
-              >
-                <option value="">No MIDI output selected</option>
-                {outputs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">INPUTS</span>
+                <select
+                  className="bg-[#111] border border-[#333] p-2 text-[11px] rounded text-dx7-teal outline-none focus:border-dx7-teal/50 transition-colors cursor-pointer"
+                  value={Array.from(selectedInputs)[0] || ""}
+                  onChange={(e) => setSelectedInputs(e.target.value ? new Set([e.target.value]) : new Set())}
+                >
+                  <option value="">No MIDI input selected</option>
+                  {inputs.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">TRANSMIT TARGET</span>
+                <select
+                  className="bg-[#111] border border-[#333] p-2 text-[11px] rounded text-dx7-teal outline-none focus:border-dx7-teal/50 transition-colors cursor-pointer"
+                  value={selectedOutput}
+                  onChange={(e) => setSelectedOutput(e.target.value)}
+                >
+                  <option value="">No MIDI output selected</option>
+                  {outputs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 p-3 bg-white/5 border border-white/10 rounded items-center mt-auto">
+              <button onClick={handlePanic} className="bg-red-950/40 text-red-500 border border-red-500/40 px-4 py-1.5 text-[9px] font-bold rounded uppercase tracking-widest hover:bg-red-900/60 transition-colors">PANIC</button>
+              <div className="flex-grow"></div>
+              <button onClick={handleReceiveFromHW} disabled={!selectedOutput} className={`px-5 py-1.5 bg-amber-950/40 text-amber-400 border border-amber-500/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-amber-900/40'}`}>{isReceivingFromHW ? 'WAITING...' : 'RECEIVE'}</button>
+              <button onClick={() => handleSendToHW(patch)} disabled={!selectedOutput} className={`px-5 py-1.5 bg-dx7-teal/20 text-dx7-teal border border-dx7-teal/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-dx7-teal/40'}`}>{isSendingToHW ? 'SENDING...' : 'SEND VOICE'}</button>
             </div>
           </div>
-          <div className="flex gap-3 p-3 bg-white/5 border border-white/10 rounded items-center mt-auto">
-            <button onClick={handlePanic} className="bg-red-950/40 text-red-500 border border-red-500/40 px-4 py-1.5 text-[9px] font-bold rounded uppercase tracking-widest hover:bg-red-900/60 transition-colors">PANIC</button>
-            <div className="flex-grow"></div>
-            <button onClick={handleReceiveFromHW} disabled={!selectedOutput} className={`px-5 py-1.5 bg-amber-950/40 text-amber-400 border border-amber-500/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-amber-900/40'}`}>{isReceivingFromHW ? 'WAITING...' : 'RECEIVE'}</button>
-            <button onClick={() => handleSendToHW(patch)} disabled={!selectedOutput} className={`px-5 py-1.5 bg-dx7-teal/20 text-dx7-teal border border-dx7-teal/30 text-[9px] font-bold rounded transition-all active:scale-95 ${!selectedOutput ? 'opacity-20 cursor-not-allowed' : 'hover:bg-dx7-teal/40'}`}>{isSendingToHW ? 'SENDING...' : 'SEND VOICE'}</button>
-          </div>
-        </div>
+        )}
       </div>
 
       {isAudioUnlocked && (

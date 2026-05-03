@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { OperatorParams } from '../types';
 import ControlKnob from './ControlKnob';
 import ControlFader from './ControlFader';
+import { normalizeOperatorLevel } from '../services/metering';
 
 interface OperatorPanelProps {
   key?: React.Key;
@@ -101,6 +102,7 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
   }, [params.rates, params.levels, params.keyScaleRate]);
 
   const isActive = params.volume > 0;
+  const meterLevel = normalizeOperatorLevel(level);
 
   const toggleOperator = () => {
     update('volume', isActive ? 0 : 99);
@@ -120,10 +122,11 @@ const OperatorPanel: React.FC<OperatorPanelProps> = ({ index, params, level, env
         </button>
 
         {/* High Visibility Level Meter (Right Edge) */}
-        <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-black/50">
+        <div className="absolute right-0 top-0 bottom-0 w-[5px] bg-black/50">
           <div
-            className="absolute bottom-0 left-0 right-0 bg-dx7-teal shadow-[0_0_8px_#00d4c1] transition-all duration-75 ease-out"
-            style={{ height: `${Math.min(100, (level || 0) * 150)}%` }} // Increased sensitivity (1.5x)
+            data-testid={`operator-${index}-meter`}
+            className="op-level-meter-fill absolute bottom-0 left-0 right-0 bg-dx7-teal shadow-[0_0_10px_#00d4c1] transition-all duration-75 ease-out"
+            style={{ height: `${meterLevel * 100}%`, opacity: meterLevel > 0 ? 1 : 0.25 }}
           />
         </div>
       </div>

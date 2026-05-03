@@ -1,5 +1,59 @@
 // Note: SAMPLE_RATE will be set from sampleRate property in process()
 let SAMPLE_RATE = 44100;
+let TWO_PI_OVER_SAMPLE_RATE = (Math.PI * 2) / SAMPLE_RATE;
+
+const TWO_PI = Math.PI * 2;
+const INV_TWO_PI = 1 / TWO_PI;
+const SIN_LUT_SIZE = 4096;
+const SIN_LUT_MASK = SIN_LUT_SIZE - 1;
+const SIN_LUT_SCALE = SIN_LUT_SIZE / TWO_PI;
+const SIN_LUT = new Float32Array(SIN_LUT_SIZE);
+for (let i = 0; i < SIN_LUT_SIZE; i++) {
+    SIN_LUT[i] = Math.sin((i / SIN_LUT_SIZE) * TWO_PI);
+}
+
+const POW2_QR_TABLE = new Float32Array(64);
+for (let i = 0; i < POW2_QR_TABLE.length; i++) {
+    POW2_QR_TABLE[i] = Math.pow(2, i / 4);
+}
+
+const FEEDBACK_FACTOR_TABLE = new Float32Array(8);
+for (let i = 0; i < FEEDBACK_FACTOR_TABLE.length; i++) {
+    FEEDBACK_FACTOR_TABLE[i] = Math.pow(2, i - 7);
+}
+
+const DETUNE_TABLE = new Float32Array(15);
+for (let i = 0; i < DETUNE_TABLE.length; i++) {
+    DETUNE_TABLE[i] = Math.pow(1.0006771307, i - 7);
+}
+
+const FIXED_COARSE_TABLE = new Float32Array([1, 10, 100, 1000]);
+
+function setProcessorSampleRate(nextSampleRate) {
+    SAMPLE_RATE = nextSampleRate;
+    TWO_PI_OVER_SAMPLE_RATE = TWO_PI / SAMPLE_RATE;
+}
+
+function wrapPhase(phase) {
+    phase -= Math.floor(phase * INV_TWO_PI) * TWO_PI;
+    return phase < 0 ? phase + TWO_PI : phase;
+}
+
+function fastSin(phase) {
+    phase = wrapPhase(phase);
+    const scaled = phase * SIN_LUT_SCALE;
+    const idx = scaled | 0;
+    const frac = scaled - idx;
+    const a = SIN_LUT[idx];
+    return a + (SIN_LUT[(idx + 1) & SIN_LUT_MASK] - a) * frac;
+}
+
+function fastTanh(x) {
+    if (x <= -3) return -1;
+    if (x >= 3) return 1;
+    const x2 = x * x;
+    return x * (27 + x2) / (27 + 9 * x2);
+}
 
 // Precise DX7 Output Level Table (0-99) from dx7-synth-js
 // This table maps operator level 0-99 to actual amplitude/modulation index
@@ -68,7 +122,9 @@ class LFO {
         this.delayState = 0; // 0=onset, 1=ramp, 2=complete
         this.patch = patch;
         this.pitchVal = 1.0;
+        this.pitchMod = 1.0;
         this.rawAmp = 0;
+        this.combinedADepth = 0;
 
         // Pre-calculate delay times
         this.updateDelayTimes();
@@ -92,28 +148,28 @@ class LFO {
         // Only update LFO every 100 samples (like reference implementation)
         if (this.counter % 100 === 0) {
             const freq = LFO_FREQUENCY_TABLE[lfoSpeed] || 0.062506;
-            const phaseStep = (Math.PI * 2 * freq) / (SAMPLE_RATE / 100);
+            const phaseStep = (TWO_PI * freq * 100) / SAMPLE_RATE;
 
             // Calculate raw waveform amplitude (-1 to 1)
             let amp = 0;
             switch (lfoWaveform) {
                 case 0: // Triangle
                     if (this.phase < Math.PI)
-                        amp = (4 * this.phase / (Math.PI * 2)) - 1;
+                        amp = (4 * this.phase / TWO_PI) - 1;
                     else
-                        amp = 3 - (4 * this.phase / (Math.PI * 2));
+                        amp = 3 - (4 * this.phase / TWO_PI);
                     break;
                 case 1: // Saw Down
-                    amp = 1 - (2 * this.phase / (Math.PI * 2));
+                    amp = 1 - (2 * this.phase / TWO_PI);
                     break;
                 case 2: // Saw Up
-                    amp = (2 * this.phase / (Math.PI * 2)) - 1;
+                    amp = (2 * this.phase / TWO_PI) - 1;
                     break;
                 case 3: // Square
                     amp = (this.phase < Math.PI) ? -1 : 1;
                     break;
                 case 4: // Sine
-                    amp = Math.sin(this.phase);
+                    amp = fastSin(this.phase);
                     break;
                 case 5: // S/H
                     amp = this.randVal;
@@ -145,19 +201,20 @@ class LFO {
             const pSens = LFO_PITCH_SENS_TABLE[lfoPitchModSens] || 0;
             const pitchModDepth = 1 + pSens * (controllerModVal + lfoPitchModDepth / 99);
             this.pitchVal = Math.pow(pitchModDepth, amp);
+            this.pitchMod = this.pitchVal;
 
             // Advance phase
             this.phase += phaseStep;
-            if (this.phase >= Math.PI * 2) {
-                this.phase -= Math.PI * 2;
+            if (this.phase >= TWO_PI) {
+                this.phase = wrapPhase(this.phase);
                 this.randVal = 1 - Math.random() * 2;
             }
         }
 
         this.counter++;
 
-        const totalADepth = (lfoAmpModDepth / 99) + controllerModVal;
-        return { pitchMod: this.pitchVal, rawMod: this.rawAmp, combinedADepth: totalADepth };
+        this.combinedADepth = (lfoAmpModDepth / 99) + controllerModVal;
+        return this;
     }
 
     sync() {
@@ -167,7 +224,9 @@ class LFO {
         this.delayState = 0;
         this.randVal = 0;
         this.pitchVal = 1.0;
+        this.pitchMod = 1.0;
         this.rawAmp = 0;
+        this.combinedADepth = 0;
     }
 }
 
@@ -206,7 +265,7 @@ class Envelope {
             const qr = Math.min(63, (effectiveRate * 41) >> 6);
             // dx7-synth-js reference divisor
             const divisor = 2048 * (SAMPLE_RATE / 44100);
-            this.decayIncrement = Math.pow(2, qr / 4) / divisor;
+            this.decayIncrement = POW2_QR_TABLE[qr] / divisor;
         }
     }
 
@@ -229,7 +288,9 @@ class Envelope {
         }
 
         // Clamp level to valid range and convert to amplitude via LUT
-        const idx = Math.max(0, Math.min(4095, Math.floor(this.level)));
+        let idx = this.level | 0;
+        if (idx < 0) idx = 0;
+        else if (idx > 4095) idx = 4095;
         return OUTPUT_LUT[idx];
     }
 
@@ -257,7 +318,7 @@ class PitchEnvelope {
         if (s < 4) {
             this.target = this.levels[s] * 32;
             const qr = Math.min(63, (this.rates[s] * 41) >> 6);
-            this.inc = Math.pow(2, qr / 4) / 128;
+            this.inc = POW2_QR_TABLE[qr] / 128;
         } else {
             this.state = 5;
         }
@@ -266,11 +327,11 @@ class PitchEnvelope {
         if (this.state === 5) return (this.level / 32 - 50) / 50;
         if (this.state < 4) {
             const diff = this.target - this.level;
-            if (Math.abs(diff) < this.inc) {
+            if (diff < this.inc && diff > -this.inc) {
                 this.level = this.target;
                 this.advance(this.state + 1);
             } else {
-                this.level += Math.sign(diff) * this.inc;
+                this.level += diff > 0 ? this.inc : -this.inc;
             }
         }
         return (this.level / 32 - 50) / 50;
@@ -284,30 +345,53 @@ class Voice {
         this.patch = patch;
         this.lfo = lfo;
         this.alg = algorithmData;
+        this.modulationMatrix = algorithmData.modulationMatrix;
+        this.outputMix = algorithmData.outputMix;
         this.velocity = velocity; // 0 to 1
         // Pitch Check: Reverting +24 boost as user reports sound is 2 octaves too high
         const transpose = (typeof patch.transpose === 'number') ? patch.transpose : 24;
         this.baseFreq = 440 * Math.pow(2, (note - 69 + (transpose - 24)) / 12);
 
-        // Calculate Final Operator Volumes using the precise OUTPUT_LEVEL_TABLE
         this.opVolumes = new Float32Array(6);
-        this.envs = patch.operators.map((op, i) => {
-            // Use the dx7-synth-js output level table directly
-            // Velocity sensitivity: (1 + (velocity - 1) * (velSens / 7))
+        this.opStepBase = new Float32Array(6);
+        this.opPitchAffected = new Int8Array(6);
+        this.opAmpModSens = new Float32Array(6);
+        this.envs = new Array(6);
+        for (let i = 0; i < 6; i++) {
+            const op = patch.operators[i];
             const velFactor = (1 + (velocity - 1) * (op.velocitySens / 7));
             const levelIdx = Math.max(0, Math.min(99, op.volume));
             this.opVolumes[i] = OUTPUT_LEVEL_TABLE[levelIdx] * velFactor;
+            this.opAmpModSens[i] = op.lfoAmpModSens > 0 ? op.lfoAmpModSens / 3.0 : 0;
+            this.envs[i] = new Envelope(op.levels, op.rates, note, op.keyScaleRate);
 
-            return new Envelope(op.levels, op.rates, note, op.keyScaleRate);
-        });
+            const detune = DETUNE_TABLE[Math.max(0, Math.min(14, op.detune | 0))];
+            if (op.oscMode === 0) {
+                const freqRatio = (op.freqCoarse || 0.5) * (1 + op.freqFine / 100);
+                this.opStepBase[i] = this.baseFreq * freqRatio * detune * TWO_PI_OVER_SAMPLE_RATE;
+                this.opPitchAffected[i] = 1;
+            } else {
+                const freqFixed = FIXED_COARSE_TABLE[(op.freqCoarse | 0) & 3] * (1 + (op.freqFine / 99) * 8.772);
+                this.opStepBase[i] = freqFixed * detune * TWO_PI_OVER_SAMPLE_RATE;
+                this.opPitchAffected[i] = 0;
+            }
+        }
 
         this.pitchEnv = new PitchEnvelope(patch.pitchEnvelope.levels, patch.pitchEnvelope.rates);
-        this.alg.outputMix.forEach(idx => { if (this.envs[idx]) this.envs[idx].isCarrier = true; });
+        for (let i = 0; i < this.outputMix.length; i++) {
+            const idx = this.outputMix[i];
+            if (this.envs[idx]) this.envs[idx].isCarrier = true;
+        }
 
-        this.phases = new Float32Array(6).fill(0);
-        this.fbHistory = new Float32Array(2).fill(0);
+        this.phases = new Float32Array(6);
+        this.fbHistory = new Float32Array(2);
         this.opOutputs = new Float32Array(6);
         this.fbConnection = this.findFeedbackConnection();
+        const feedback = Math.max(0, Math.min(7, patch.feedback | 0));
+        this.fbFactor = FEEDBACK_FACTOR_TABLE[feedback];
+        const masterLevel = Math.max(0, Math.min(99, Number(patch.masterLevel ?? 80))) / 99;
+        const outputScaling = 1 / Math.max(1, this.outputMix.length);
+        this.perVoiceLevel = PER_VOICE_LEVEL * outputScaling * masterLevel;
 
         this.isReleased = false;
         this.isSustained = false;
@@ -322,13 +406,16 @@ class Voice {
                 if (curr === end) return true;
                 if (visited.has(curr)) continue;
                 visited.add(curr);
-                this.alg.modulationMatrix[curr].forEach(m => q.push(m));
+                const mods = this.modulationMatrix[curr];
+                for (let i = 0; i < mods.length; i++) q.push(mods[i]);
             }
             return false;
         };
 
         for (let carrier = 0; carrier < 6; carrier++) {
-            for (const modulator of this.alg.modulationMatrix[carrier]) {
+            const mods = this.modulationMatrix[carrier];
+            for (let i = 0; i < mods.length; i++) {
+                const modulator = mods[i];
                 if (modulator === carrier) return { from: modulator, to: carrier };
                 if (hasPath(modulator, carrier)) return { from: modulator, to: carrier };
             }
@@ -336,83 +423,63 @@ class Voice {
         return null;
     }
 
-    render(globalBend, lfoData) {
-        // Feedback ratio from dx7-synth-js: Math.pow(2, (fb - 7)) where fb=0-7
-        const fbFactor = Math.pow(2, this.patch.feedback - 7);
-        const masterLevel = Math.max(0, Math.min(99, Number(this.patch.masterLevel ?? 80))) / 99;
+    render(bendMult, lfoData) {
         const pEnvMod = 1.0 + (this.pitchEnv.render() * 0.1);
-        const bendMult = Math.pow(2, (globalBend * 2) / 12);
-
-        const totalPitchMod = pEnvMod * bendMult * lfoData.pitchMod;
-        const { rawMod, combinedADepth } = lfoData;
-
-        let finalL = 0, finalR = 0;
+        const pitchMod = lfoData.pitchMod ?? lfoData.pitchVal ?? 1.0;
+        const totalPitchMod = pEnvMod * bendMult * pitchMod;
+        const rawMod = lfoData.rawAmp;
+        const combinedADepth = lfoData.combinedADepth;
 
         for (let i = 5; i >= 0; i--) {
-            const op = this.patch.operators[i];
-
-            // Calculate frequency based on oscMode
-            let frequency;
-            if (op.oscMode === 0) {
-                // Ratio mode: frequency = baseFreq * ratio
-                const freqRatio = (op.freqCoarse || 0.5) * (1 + op.freqFine / 100);
-                const detune = Math.pow(1.0006771307, op.detune - 7);
-                frequency = this.baseFreq * freqRatio * detune * totalPitchMod;
-            } else {
-                // Fixed mode: frequency in Hz (not affected by note pitch)
-                // Formula from dx7-synth-js: pow(10, coarse % 4) * (1 + (fine / 99) * 8.772)
-                const freqFixed = Math.pow(10, op.freqCoarse % 4) * (1 + (op.freqFine / 99) * 8.772);
-                const detune = Math.pow(1.0006771307, op.detune - 7);
-                frequency = freqFixed * detune; // Note: no baseFreq, no totalPitchMod for fixed
-            }
-
-            const step = (Math.PI * 2 * frequency) / SAMPLE_RATE;
+            const step = this.opPitchAffected[i] ? this.opStepBase[i] * totalPitchMod : this.opStepBase[i];
 
             let mod = 0;
-            this.alg.modulationMatrix[i].forEach(m => {
+            const mods = this.modulationMatrix[i];
+            for (let modIdx = 0; modIdx < mods.length; modIdx++) {
+                const m = mods[modIdx];
                 if (this.fbConnection && m === this.fbConnection.from && i === this.fbConnection.to) {
-                    mod += ((this.fbHistory[0] + this.fbHistory[1]) / 2) * fbFactor;
+                    mod += ((this.fbHistory[0] + this.fbHistory[1]) * 0.5) * this.fbFactor;
                 } else {
                     mod += this.opOutputs[m];
                 }
-            });
+            }
 
             const envAmp = this.envs[i].render();
             const vol = this.opVolumes[i];
 
             let lfoAmp = 1.0;
-            if (op.lfoAmpModSens > 0) {
-                const sens = op.lfoAmpModSens / 3.0;
-                const amAmount = combinedADepth * sens * (0.5 * (1 + rawMod));
+            const ampSens = this.opAmpModSens[i];
+            if (ampSens > 0) {
+                const amAmount = combinedADepth * ampSens * (0.5 * (1 + rawMod));
                 lfoAmp = 1.0 - (amAmount * 0.8);
             }
 
-            const val = Math.sin(this.phases[i] + mod) * envAmp * vol * lfoAmp;
+            const val = fastSin(this.phases[i] + mod) * envAmp * vol * lfoAmp;
             this.opOutputs[i] = val;
 
             if (this.fbConnection && i === this.fbConnection.from) {
                 this.fbHistory[1] = this.fbHistory[0];
                 this.fbHistory[0] = val;
             }
-            this.phases[i] = (this.phases[i] + step) % (Math.PI * 2);
+            let phase = this.phases[i] + step;
+            if (phase >= TWO_PI) phase = wrapPhase(phase);
+            this.phases[i] = phase;
         }
 
-        this.alg.outputMix.forEach(c => {
-            finalL += this.opOutputs[c];
-            finalR += this.opOutputs[c];
-        });
+        let output = 0;
+        for (let i = 0; i < this.outputMix.length; i++) {
+            output += this.opOutputs[this.outputMix[i]];
+        }
 
         // Normalize by carrier count so multi-carrier algorithms do not get disproportionately louder,
         // then apply the user-visible master level control before the final bus mix.
-        const outputScaling = 1 / Math.max(1, this.alg.outputMix.length);
-        const perVoiceLevel = PER_VOICE_LEVEL * outputScaling * masterLevel;
-        return [finalL * perVoiceLevel, finalR * perVoiceLevel];
+        return output * this.perVoiceLevel;
     }
 
     triggerRelease() {
         if (!this.isReleased) {
             this.isReleased = true;
-            this.envs.forEach(e => e.noteOff());
+            for (let i = 0; i < this.envs.length; i++) this.envs[i].noteOff();
             this.pitchEnv.noteOff();
         }
     }
@@ -434,7 +501,11 @@ class Voice {
 
     isFinished() {
         // Check if all carrier envelopes are finished
-        return this.envs.every(e => !e.isCarrier || e.isFinished());
+        for (let i = 0; i < this.envs.length; i++) {
+            const env = this.envs[i];
+            if (env.isCarrier && !env.isFinished()) return false;
+        }
+        return true;
     }
 }
 
@@ -499,6 +570,9 @@ class MonotronDelay {
         this.jitter = 0;
         this.jitterTarget = 0;
         this.controlCounter = 0;
+        this.active = false;
+        this.outputL = 0;
+        this.outputR = 0;
         this.allocateBuffer();
 
         this.inputHp = new DcBlocker(0.995);
@@ -574,6 +648,7 @@ class MonotronDelay {
         const amount = Math.max(0, Math.min(1, this.delayFeedback / 99));
 
         this.amount = amount;
+        this.active = amount > 0.0001;
         this.feedbackGain = amount * (0.54 + 0.64 * amount);
         this.wetMix = amount * (0.12 + 0.5 * amount);
         this.inputDrive = 1.15 + amount * 0.95;
@@ -595,14 +670,15 @@ class MonotronDelay {
     readDelay(delaySamples) {
         let readPos = this.writeIndex - delaySamples;
         while (readPos < 0) readPos += this.maxDelaySamples;
-        const i0 = Math.floor(readPos) % this.maxDelaySamples;
+        const baseIndex = Math.floor(readPos);
+        const i0 = baseIndex % this.maxDelaySamples;
         const i1 = (i0 + 1) % this.maxDelaySamples;
-        const frac = readPos - Math.floor(readPos);
+        const frac = readPos - baseIndex;
         return this.buffer[i0] + (this.buffer[i1] - this.buffer[i0]) * frac;
     }
 
     softClip(input, drive) {
-        return Math.tanh(input * drive) / drive;
+        return fastTanh(input * drive) / drive;
     }
 
     reset() {
@@ -620,17 +696,16 @@ class MonotronDelay {
     render(left, right) {
         const mono = (left + right) * 0.5;
 
-        if (this.amount <= 0.0001) {
+        if (!this.active) {
             this.feedbackSample = 0;
             this.buffer[this.writeIndex] = 0;
             this.writeIndex = (this.writeIndex + 1) % this.maxDelaySamples;
-            return [left, right];
+            this.outputL = left;
+            this.outputR = right;
+            return;
         }
 
         this.controlCounter += 1;
-        if ((this.controlCounter & 31) === 0) {
-            this.updateDerivedParams();
-        }
         if ((this.controlCounter & 511) === 0) {
             this.jitterTarget = this.nextNoise() * this.jitterDepth;
         }
@@ -657,7 +732,8 @@ class MonotronDelay {
 
         this.feedbackSample = delayReturn;
         const wet = this.softClip(delayReturn * this.wetMix, 1.4);
-        return [left + wet, right + wet];
+        this.outputL = left + wet;
+        this.outputR = right + wet;
     }
 }
 
@@ -669,16 +745,21 @@ class DX7Processor extends AudioWorkletProcessor {
         this.globalFx = { delayTime: 45, delayFeedback: 0 };
         this.monotronDelay = new MonotronDelay(SAMPLE_RATE);
         this.pitchBend = 0;
+        this.pitchBendMultiplier = 1;
         this.modWheel = 0;
         this.aftertouch = 0;
         this.sustain = false;
         this.lfo = null;
+        this.neutralLfo = { pitchMod: 1, rawAmp: 0, combinedADepth: 0 };
         this.algorithms = null; // Received via message
         this.counter = 0; // For metering timing
         this.heldNotes = []; // Stack for Mono mode note priority
         this.scheduledEvents = []; // [{ frame, type, data }]
         this.scheduledEventIndex = 0;
         this.globalFrame = 0;
+        this.meterLevels = new Float32Array(6);
+        this.meterStates = new Int8Array(6);
+        this.meterPeaks = new Float32Array(6);
 
         this.port.onmessage = e => {
             const { type, data, algorithms } = e.data;
@@ -718,6 +799,7 @@ class DX7Processor extends AudioWorkletProcessor {
         this.heldNotes = [];
         this.sustain = false;
         this.pitchBend = 0;
+        this.pitchBendMultiplier = 1;
         this.modWheel = 0;
         this.aftertouch = 0;
         this.counter = 0;
@@ -729,11 +811,14 @@ class DX7Processor extends AudioWorkletProcessor {
 
     handleIncomingEvent(type, data) {
         if (type === 'patch') {
-            this.patch = data;
+            const nextPatch = data && data.patch ? data.patch : data;
+            const resetVoices = !(data && data.patch && data.resetVoices === false);
+            this.patch = nextPatch;
             this.lfo = new LFO(this.patch);
-            // Preserve realtime controller state on patch change.
-            this.heldNotes = [];
-            this.voices = [];
+            if (resetVoices) {
+                this.heldNotes = [];
+                this.voices = [];
+            }
             this.scheduledEvents = [];
             this.scheduledEventIndex = 0;
             this.globalFrame = 0;
@@ -745,11 +830,14 @@ class DX7Processor extends AudioWorkletProcessor {
             this.voices = [];
             this.heldNotes = [];
             this.sustain = false;
+            this.pitchBend = 0;
+            this.pitchBendMultiplier = 1;
             return;
         }
 
         if (type === 'pitchBend') {
             this.pitchBend = Number(data) || 0;
+            this.pitchBendMultiplier = Math.pow(2, (this.pitchBend * 2) / 12);
             return;
         }
         if (type === 'modWheel') {
@@ -831,8 +919,20 @@ class DX7Processor extends AudioWorkletProcessor {
         const abs = Math.abs(sample);
         if (abs <= SOFT_LIMIT_THRESHOLD) return sample;
         const excess = (abs - SOFT_LIMIT_THRESHOLD) / (1 - SOFT_LIMIT_THRESHOLD);
-        const limited = SOFT_LIMIT_THRESHOLD + (1 - SOFT_LIMIT_THRESHOLD) * Math.tanh(excess);
-        return Math.sign(sample) * limited;
+        const limited = SOFT_LIMIT_THRESHOLD + (1 - SOFT_LIMIT_THRESHOLD) * fastTanh(excess);
+        return sample < 0 ? -limited : limited;
+    }
+
+    pruneFinishedVoices() {
+        let write = 0;
+        for (let read = 0; read < this.voices.length; read++) {
+            const voice = this.voices[read];
+            if (!voice.isFinished()) {
+                this.voices[write] = voice;
+                write += 1;
+            }
+        }
+        this.voices.length = write;
     }
 
     process(inputs, outputs) {
@@ -843,26 +943,41 @@ class DX7Processor extends AudioWorkletProcessor {
 
         // Update global SAMPLE_RATE from AudioWorkletProcessor
         if (SAMPLE_RATE !== sampleRate) {
-            SAMPLE_RATE = sampleRate;
+            setProcessorSampleRate(sampleRate);
             this.monotronDelay.setSampleRate(SAMPLE_RATE);
             console.log('DX7 Processor running at', SAMPLE_RATE, 'Hz');
         }
 
         const atEffect = this.patch.aftertouchEnabled ? this.aftertouch : 0;
         const ctrlMod = Math.min(1.27, this.modWheel + atEffect);
+        const lfo = this.lfo;
+        this.pruneFinishedVoices();
 
         for (let i = 0; i < outL.length; i++) {
             this.flushScheduledEventsAtFrame(this.globalFrame);
-            let l = 0, r = 0;
+            let mixed = 0;
+            const sampleMeters = (this.globalFrame & 31) === 0;
 
-            const lfoOut = this.lfo ? this.lfo.render(ctrlMod) : { pitchMod: 1, rawMod: 0, combinedADepth: 0 };
+            const lfoOut = lfo ? lfo.render(ctrlMod) : this.neutralLfo;
 
-            this.voices = this.voices.filter(v => !v.isFinished());
-            for (const v of this.voices) {
-                const [vl, vr] = v.render(this.pitchBend, lfoOut);
-                l += vl; r += vr;
+            for (let voiceIndex = 0; voiceIndex < this.voices.length; voiceIndex++) {
+                const voice = this.voices[voiceIndex];
+                mixed += voice.render(this.pitchBendMultiplier, lfoOut);
+                if (sampleMeters) {
+                    const peaks = this.meterPeaks;
+                    for (let op = 0; op < 6; op++) {
+                        const level = Math.abs(voice.opOutputs[op]);
+                        if (level > peaks[op]) peaks[op] = level;
+                    }
+                }
             }
-            [l, r] = this.monotronDelay.render(l, r);
+            let l = mixed;
+            let r = mixed;
+            if (this.monotronDelay.active) {
+                this.monotronDelay.render(l, r);
+                l = this.monotronDelay.outputL;
+                r = this.monotronDelay.outputR;
+            }
             outL[i] = this.softLimit(l);
             outR[i] = this.softLimit(r);
             this.globalFrame += 1;
@@ -870,18 +985,23 @@ class DX7Processor extends AudioWorkletProcessor {
 
         // Metering: Send operator levels and envelope states every ~46ms (2048 samples)
         if (this.counter % 2048 === 0) {
-            const levels = new Float32Array(6);
-            const states = new Int8Array(6).fill(4); // Default to finished/off
+            const levels = this.meterLevels;
+            const states = this.meterStates;
+            for (let op = 0; op < 6; op++) {
+                const peak = this.meterPeaks[op];
+                levels[op] = Number.isFinite(peak) ? peak : 0;
+                this.meterPeaks[op] = 0;
+                states[op] = 4;
+            }
 
             if (this.voices.length > 0) {
                 // Use the latest voice for visualization
                 const latestVoice = this.voices[this.voices.length - 1];
                 for (let op = 0; op < 6; op++) {
-                    levels[op] = Math.abs(latestVoice.opOutputs[op]);
                     states[op] = latestVoice.envs[op].state;
                 }
             }
-            this.port.postMessage({ type: 'opLevels', data: levels, envStates: states });
+            this.port.postMessage({ type: 'opLevels', data: new Float32Array(levels), envStates: new Int8Array(states) });
         }
         this.counter += outL.length;
 

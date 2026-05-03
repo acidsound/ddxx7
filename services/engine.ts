@@ -6,6 +6,10 @@ export class DX7Engine {
   private node: AudioWorkletNode | null = null;
   private patchQueue: Patch | null = null;
   private globalFxQueue: GlobalFxState | null = null;
+  private pendingPatch: { patch: Patch; resetVoices: boolean } | null = null;
+  private pendingPatchFrame: number | null = null;
+  private pendingGlobalFx: GlobalFxState | null = null;
+  private pendingGlobalFxFrame: number | null = null;
   private disposed = false;
   private dryGain: GainNode | null = null;
   private reverbSendGain: GainNode | null = null;
@@ -97,7 +101,7 @@ export class DX7Engine {
 
       if (this.patchQueue) {
         this.updateFxFromPatch(this.patchQueue);
-        this.node.port.postMessage({ type: 'patch', data: this.patchQueue });
+        this.node.port.postMessage({ type: 'patch', data: { patch: this.patchQueue, resetVoices: true } });
         this.patchQueue = null;
       }
 
@@ -115,19 +119,64 @@ export class DX7Engine {
     if (this.disposed) return;
     if (this.context.state === 'suspended') await this.context.resume();
   }
-  updatePatch(patch: Patch) {
+
+  private postPatchNow(patch: Patch, resetVoices: boolean) {
     if (this.disposed) return;
     this.updateFxFromPatch(patch);
-    this.node?.port.postMessage({ type: 'patch', data: patch });
-    this.patchQueue = patch;
+    if (!this.node) {
+      this.patchQueue = patch;
+      return;
+    }
+    this.node.port.postMessage({ type: 'patch', data: { patch, resetVoices } });
   }
+
+  private flushPendingPatch() {
+    if (!this.pendingPatch) return;
+    const pending = this.pendingPatch;
+    this.pendingPatch = null;
+    if (this.pendingPatchFrame !== null) {
+      window.cancelAnimationFrame(this.pendingPatchFrame);
+      this.pendingPatchFrame = null;
+    }
+    this.postPatchNow(pending.patch, pending.resetVoices);
+  }
+
+  updatePatch(patch: Patch, options: { resetVoices?: boolean } = {}) {
+    if (this.disposed) return;
+    const resetVoices = options.resetVoices ?? false;
+    this.updateFxFromPatch(patch);
+    if (!this.node) {
+      this.patchQueue = patch;
+      return;
+    }
+    this.pendingPatch = { patch, resetVoices };
+    if (this.pendingPatchFrame !== null) return;
+    this.pendingPatchFrame = window.requestAnimationFrame(() => {
+      this.pendingPatchFrame = null;
+      const pending = this.pendingPatch;
+      this.pendingPatch = null;
+      if (pending) this.postPatchNow(pending.patch, pending.resetVoices);
+    });
+  }
+
   updateGlobalFx(globalFx: GlobalFxState) {
     if (this.disposed) return;
-    this.node?.port.postMessage({ type: 'globalFx', data: globalFx });
-    this.globalFxQueue = globalFx;
+    if (!this.node) {
+      this.globalFxQueue = globalFx;
+      return;
+    }
+    this.pendingGlobalFx = globalFx;
+    if (this.pendingGlobalFxFrame !== null) return;
+    this.pendingGlobalFxFrame = window.requestAnimationFrame(() => {
+      this.pendingGlobalFxFrame = null;
+      const pending = this.pendingGlobalFx;
+      this.pendingGlobalFx = null;
+      if (pending && !this.disposed) this.node?.port.postMessage({ type: 'globalFx', data: pending });
+    });
   }
   noteOn(note: number, velocity: number) {
     if (this.disposed) return;
+    this.flushPendingPatch();
     this.node?.port.postMessage({ type: 'noteOn', data: { note, velocity } });
   }
   noteOff(note: number) {
@@ -169,7 +218,17 @@ export class DX7Engine {
     this.disposed = true;
     this.patchQueue = null;
     this.globalFxQueue = null;
+    this.pendingPatch = null;
+    this.pendingGlobalFx = null;
     this.opLevelsHandler = null;
+    if (this.pendingPatchFrame !== null) {
+      window.cancelAnimationFrame(this.pendingPatchFrame);
+      this.pendingPatchFrame = null;
+    }
+    if (this.pendingGlobalFxFrame !== null) {
+      window.cancelAnimationFrame(this.pendingGlobalFxFrame);
+      this.pendingGlobalFxFrame = null;
+    }
 
     if (this.node) {
       this.node.port.onmessage = null;

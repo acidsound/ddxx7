@@ -96,29 +96,29 @@ const Keyboard: React.FC<KeyboardProps> = ({
 
     // Determine diff
     const prev = touchedNotesRef.current;
+    const nextActiveNotes = new Set(activeNotesRef.current);
+    let changed = false;
 
     prev.forEach(note => {
       if (!currentTouched.has(note)) {
         onNoteOff(note); // Send Note Off
-        setActiveNotes(prevSet => {
-          const next = new Set(prevSet);
-          next.delete(note);
-          return next;
-        });
+        nextActiveNotes.delete(note);
+        changed = true;
       }
     });
 
     currentTouched.forEach(note => {
       if (!prev.has(note)) {
         onNoteOn(note); // Send Note On
-        setActiveNotes(prevSet => {
-          const next = new Set(prevSet);
-          next.add(note);
-          return next;
-        });
+        nextActiveNotes.add(note);
+        changed = true;
       }
     });
 
+    if (changed) {
+      activeNotesRef.current = nextActiveNotes;
+      setActiveNotes(new Set(nextActiveNotes));
+    }
     touchedNotesRef.current = currentTouched;
   }, [onNoteOn, onNoteOff]);
 
@@ -134,6 +134,8 @@ const Keyboard: React.FC<KeyboardProps> = ({
     el.addEventListener('touchcancel', handleTouch, opts);
 
     return () => {
+      touchedNotesRef.current.forEach(note => onNoteOff(note));
+      touchedNotesRef.current.clear();
       el.removeEventListener('touchstart', handleTouch);
       el.removeEventListener('touchmove', handleTouch);
       el.removeEventListener('touchend', handleTouch);

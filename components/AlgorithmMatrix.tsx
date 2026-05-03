@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ALGORITHMS } from '../services/algorithms';
+import { normalizeOperatorLevel } from '../services/metering';
 
 interface AlgorithmMatrixProps {
   algorithmId: number; // 1-32
@@ -225,10 +226,10 @@ export default function AlgorithmMatrix({ algorithmId, levels }: AlgorithmMatrix
         {Object.entries(positions).map(([opIdx, pos]) => {
           const id = parseInt(opIdx);
           const p = getSvgPos(id);
-          const level = levels ? levels[id] || 0 : 0;
-          const isActive = level > 0.05;
+          const level = normalizeOperatorLevel(levels ? levels[id] : 0);
+          const isActive = level > 0.03;
           const isFeedback = feedbackSources.has(id);
-          const shouldShake = isFeedback && level > 0.1; // Shake threshold
+          const shouldShake = isFeedback && level > 0.08; // Shake threshold
 
           return (
             <g
